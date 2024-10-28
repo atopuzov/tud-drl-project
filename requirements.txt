@@ -1,0 +1,11 @@
+stable_baselines3
+gymnasium
+tensorboard
+# tensorflow # tensorboard complains it wants tensoflow
+imageio # gif generation
+
+# Tools
+jupyter-lab
+black[jupyter]
+isort
+# torch-tb-profiler
