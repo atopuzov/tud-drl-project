@@ -17,11 +17,29 @@ from tetrisgame import Actions, TetrisGame
 from tetrisrenderer import (TetrisASCIIRenderer, TetrisPyGameRenderer,
                             TetrisRGBArrayRenderer)
 
+env_kwargs = {
+    "grid_size": (20, 10),
+    "tetrominoes": None,
+    "render_mode": None,
+    "ticks_per_drop": 1,
+}
+gym.register(
+    "Tetris-v0", entry_point="tetrisenv:StandardRewardTetrisEnv", kwargs=env_kwargs
+)
+gym.register(
+    "Tetris-v1", entry_point="tetrisenv:StandardReward2TetrisEnv", kwargs=env_kwargs
+)
+gym.register("Tetris-v2", entry_point="tetrisenv:MyTetrisEnv", kwargs=env_kwargs)
+gym.register("Tetris-v3", entry_point="tetrisenv:MyTetrisEnv2", kwargs=env_kwargs)
+
 
 class BaseRewardTetrisEnv(gym.Env):
     """Base Tetris environment with minimal reward structure."""
 
-    metadata = {"render_modes": ["pygame", "ascii", "rgb_array"], "render_fps": 4}
+    metadata = {
+        "render_modes": ["pygame", "ansi", "rgb_array", "human"],
+        "render_fps": 4,
+    }
 
     def __init__(
         self, grid_size=(20, 10), tetrominoes=None, render_mode=None, ticks_per_drop=1
@@ -49,7 +67,7 @@ class BaseRewardTetrisEnv(gym.Env):
         )
 
         self.renderer = None
-        if self.render_mode == "pygame":
+        if self.render_mode in {"pygame", "human"}:
             self.renderer = TetrisPyGameRenderer()
         elif self.render_mode == "ansi":
             self.renderer = TetrisASCIIRenderer()

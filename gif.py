@@ -7,20 +7,20 @@ In no event shall the authors be liable for any damages arising from the use
 of this software.
 """
 
+import argparse
 import sys
 from pathlib import Path
 
+import gymnasium as gym
 import imageio
 import numpy as np
 from stable_baselines3 import DQN
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-from tetrisenv import MyTetrisEnv2, StandardRewardTetrisEnv
+import tetrisenv
 
 if __name__ == "__main__":
-    import argparse
-
     parser = argparse.ArgumentParser(description="Game of Tetris")
     parser.add_argument(
         "--delay", type=float, default=0.01, help="Delay between frames"
@@ -30,14 +30,19 @@ if __name__ == "__main__":
         "--model-file", type=Path, default="tetris_model.zip", help="Model file"
     )
     group.add_argument("--random", action="store_true", help="Use a random agent")
+    parser.add_argument(
+        "--env-name", type=str, default="Tetris-v3", help="Environment name"
+    )
     args = parser.parse_args()
     render_mode = "rgb_array"
 
     tetrominoes = ["I", "O", "T", "L", "J"]
-    # TODO: Register gym environments and use by name
-    kls = MyTetrisEnv2
-    # kls = StandardRewardTetrisEnv
-    env = kls(grid_size=(20, 10), tetrominoes=tetrominoes, render_mode=render_mode)
+    env = gym.make(
+        args.env_name,
+        grid_size=(20, 10),
+        tetrominoes=tetrominoes,
+        render_mode=render_mode,
+    )
     env = DummyVecEnv([lambda: Monitor(env)])
 
     images = Path("images")

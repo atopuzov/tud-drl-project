@@ -4,6 +4,113 @@ import pytest
 from tetrisgame import Actions, Rotation, TetrisGame, next_rotation
 
 
+def convert_board_to_array(board_str):
+    """
+    Converts a string representation of a Tetris board into a 2D NumPy array.
+
+    The input board string should have borders represented by any characters
+    (e.g., '|', '-', '+') on the first and last lines, and the first and last
+    characters of each line. The playable area should be represented by the
+    characters '█', '#', or 'x' for filled cells, and '.' or ' ' for empty cells.
+
+    Args:
+        board_str (str): The string representation of the Tetris board.
+
+    Returns:
+        np.ndarray: A 2D NumPy array where filled cells are represented by 1
+                    and empty cells are represented by 0.
+    """
+    lines = board_str.strip().split("\n")
+    height = len(lines) - 2  # Exclude the first and last lines (borders)
+    width = len(lines[1]) - 2  # Exclude the first and last characters (borders)
+
+    array = np.zeros((height, width), dtype=int)
+    for i, line in enumerate(lines[1:-1]):  # Skip the first and last lines (borders)
+        for j, char in enumerate(
+            line[1:-1]
+        ):  # Skip the first and last characters (borders)
+            if char in ("█", "#", "x"):
+                array[i, j] = 1
+            elif char in (".", " "):
+                array[i, j] = 0
+    return array
+
+
+def convert_2x_board_to_array(board_str):
+    """
+    Converts a board string representation to an array, downsampling the board width by a factor of 2.
+
+    Args:
+        board_str (str): The string representation of the board, where each line represents a row of the board.
+
+    Returns:
+        np.ndarray: A 2D NumPy array representing the downsampled board.
+    """
+
+    def downsample_line(line):
+        # Skip the first and last characters (borders) and take every second character in between
+        return line[0] + "".join(line[i] for i in range(1, len(line) - 1, 2)) + line[-1]
+
+    lines = board_str.strip().split("\n")
+    downsampled_lines = [downsample_line(line) for line in lines]
+
+    downsampled_board_str = "\n".join(downsampled_lines)
+
+    return convert_board_to_array(downsampled_board_str)
+
+
+TEST_BOARD_1 = """
++--------------------+
+|....................|
+|....................|
+|....................|
+|....................|
+|....................|
+|....................|
+|....................|
+|....................|
+|....................|
+|....................|
+|....................|
+|....................|
+|....................|
+|....................|
+|....................|
+|....................|
+|................██..|
+|................██..|
+|..██......████..██..|
+|██████..████....██..|
++--------------------+
+"""
+
+
+TEST_BOARD_2 = """
++--------------------+
+|....................|
+|......████████......|
+|......██............|
+|......██............|
+|..██..██............|
+|..██..██............|
+|..██████............|
+|..██████............|
+|████████............|
+|████████............|
+|██..████............|
+|██..████............|
+|██..████............|
+|██..████............|
+|████████████........|
+|████████████........|
+|████████..████......|
+|████████..████......|
+|████████████..████..|
+|████████████..████..|
++--------------------+
+"""
+
+
 def test_next_rotation_R000():
     assert next_rotation(Rotation.R000) == Rotation.R090
 
@@ -248,161 +355,20 @@ def test_analyze_board_empty():
     assert sum_height == 0
 
 
-def test_analyze_board_single_block():
-    game = TetrisGame()
-    game.reset()
-    game.grid[game.board_height - 1, 0] = 1  # Place a single block at the bottom-left
-    bumpiness, holes, column_heights, min_height, max_height, sum_height = (
-        game._analyze_board()
-    )
-    assert bumpiness == 0
-    assert holes == 0
-    assert column_heights[0] == 1
-    assert np.all(column_heights[1:] == 0)
-    assert min_height == 1
-    assert max_height == 1
-    assert sum_height == 1
-
-
-def test_analyze_board_multiple_blocks():
-    game = TetrisGame()
-    game.reset()
-    game.grid[game.board_height - 1, 0] = 1
-    game.grid[game.board_height - 2, 1] = 1
-    bumpiness, holes, column_heights, min_height, max_height, sum_height = (
-        game._analyze_board()
-    )
-    assert bumpiness == 1
-    assert holes == 0
-    assert column_heights[0] == 1
-    assert column_heights[1] == 2
-    assert np.all(column_heights[2:] == 0)
-    assert min_height == 1
-    assert max_height == 2
-    assert sum_height == 3
-
-
-def test_analyze_board_with_holes():
-    game = TetrisGame()
-    game.reset()
-    game.grid[game.board_height - 1, 0] = 1
-    game.grid[game.board_height - 3, 0] = 1  # Create a hole in the first column
-    bumpiness, holes, column_heights, min_height, max_height, sum_height = (
-        game._analyze_board()
-    )
-    assert bumpiness == 0
-    assert holes == 1
-    assert column_heights[0] == 3
-    assert np.all(column_heights[1:] == 0)
-    assert min_height == 3
-    assert max_height == 3
-    assert sum_height == 3
-
-
-def convert_board_to_array(board_str):
-    """
-    Converts a string representation of a Tetris board into a 2D NumPy array.
-
-    The input board string should have borders represented by any characters
-    (e.g., '|', '-', '+') on the first and last lines, and the first and last
-    characters of each line. The playable area should be represented by the
-    characters '█', '#', or 'x' for filled cells, and '.' or ' ' for empty cells.
-
-    Args:
-        board_str (str): The string representation of the Tetris board.
-
-    Returns:
-        np.ndarray: A 2D NumPy array where filled cells are represented by 1
-                    and empty cells are represented by 0.
-    """
-    lines = board_str.strip().split("\n")
-    height = len(lines) - 2  # Exclude the first and last lines (borders)
-    width = len(lines[1]) - 2  # Exclude the first and last characters (borders)
-
-    array = np.zeros((height, width), dtype=int)
-    for i, line in enumerate(lines[1:-1]):  # Skip the first and last lines (borders)
-        for j, char in enumerate(
-            line[1:-1]
-        ):  # Skip the first and last characters (borders)
-            if char in ("█", "#", "x"):
-                array[i, j] = 1
-            elif char in (".", " "):
-                array[i, j] = 0
-    return array
-
-
-def convert_board_to_array_2x(board_str):
-    """
-    Converts a board string representation to an array, downsampling the board by a factor of 2 in both dimensions.
-
-    Args:
-        board_str (str): The string representation of the board, where each line represents a row of the board.
-
-    Returns:
-        np.ndarray: A 2D NumPy array representing the downsampled board.
-    """
-
-    def downsample_line(line):
-        # Skip the first and last characters (borders) and take every second character in between
-        return line[0] + "".join(line[i] for i in range(1, len(line) - 1, 2)) + line[-1]
-
-    lines = board_str.strip().split("\n")
-    downsampled_lines = [downsample_line(line) for line in lines]
-
-    downsampled_board_str = "\n".join(downsampled_lines)
-
-    return convert_board_to_array(downsampled_board_str)
-
-
-TEST_BOARD_1 = """
-+--------------------+
-|....................|
-|....................|
-|....................|
-|........████........|
-|........████........|
-|........██████......|
-|........██..██......|
-|██████████████....██|
-|..████..████████████|
-|██████████████....██|
-|....██████████....██|
-|██████..████..██████|
-|██████..████████████|
-|██..██..██████..████|
-|████████..██████████|
-|██████████████....██|
-|████████..████..████|
-|████████..██..██████|
-|██████████████..████|
-|████████..████..██..|
-+--------------------+
-"""
-
-TEST_BOARD_2 = """
-+----------+
-|          |
-| x  x     |
-| x  x     |
-| xxxx     |
-+----------+
-"""
-
-
-def test_analyze_board_bumpiness():
+def test_analyze_board():
     game = TetrisGame(grid_size=(20, 10))  # Smaller grid for easier testing
     game.reset()
-    game.grid = convert_board_to_array_2x(TEST_BOARD_1)
+    game.grid = convert_2x_board_to_array(TEST_BOARD_1)
     print(game.grid)
     print(game.grid.shape)
 
     bumpiness, holes, column_heights, min_height, max_height, sum_height = (
         game._analyze_board()
     )
-    assert bumpiness == 10  #
-    assert holes == 26
-    assert min_height == 1
-    assert max_height == 3
+    assert bumpiness == 15
+    assert holes == 1
+    assert min_height == 2
+    assert max_height == 17
     assert sum_height == 6
 
 

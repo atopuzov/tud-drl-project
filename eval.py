@@ -16,7 +16,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-from tetrisenv import StandardRewardTetrisEnv
+from tetrisenv import MyTetrisEnv2, StandardRewardTetrisEnv
 
 if __name__ == "__main__":
     import argparse
@@ -30,13 +30,19 @@ if __name__ == "__main__":
         "--model-file", type=Path, default="tetris_model.zip", help="Model file"
     )
     parser.add_argument("--episodes", type=int, default=20, help="Number of episodes")
+    parser.add_argument(
+        "--env-name", type=str, default="Tetris-v3", help="Environment name"
+    )
     args = parser.parse_args()
 
     render_mode = "pygame" if args.pygame else "ansi"
 
     tetrominoes = ["I", "O", "T", "L", "J"]
-    env = StandardRewardTetrisEnv(
-        grid_size=(20, 10), tetrominoes=tetrominoes, render_mode=render_mode
+    env = gym.make(
+        args.env_name,
+        grid_size=(20, 10),
+        tetrominoes=tetrominoes,
+        render_mode=render_mode,
     )
     env = DummyVecEnv([lambda: Monitor(env)])
 

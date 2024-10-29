@@ -7,6 +7,7 @@ In no event shall the authors be liable for any damages arising from the use
 of this software.
 """
 
+import argparse
 import os
 import sys
 import time
@@ -18,12 +19,10 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-from tetrisenv import MyTetrisEnv2, StandardRewardTetrisEnv
+import tetrisenv
 from tetrisgame import Actions
 
 if __name__ == "__main__":
-    import argparse
-
     parser = argparse.ArgumentParser(description="Game of Tetris")
     parser.add_argument(
         "--delay", type=float, default=0.01, help="Delay between frames"
@@ -36,15 +35,20 @@ if __name__ == "__main__":
     game_mode = parser.add_mutually_exclusive_group()
     game_mode.add_argument("--pygame", action="store_true", help="Use pygame interface")
     game_mode.add_argument("--ascii", action="store_true", help="Use ascii interface")
+    parser.add_argument(
+        "--env-name", type=str, default="Tetris-v3", help="Use SubprocVecEnv"
+    )
     args = parser.parse_args()
 
     render_mode = "pygame" if args.pygame else "ansi"
 
     tetrominoes = ["I", "O", "T", "L", "J"]
-    # TODO: Register gym environments and use by name
-    kls = MyTetrisEnv2
-    # kls = StandardRewardTetrisEnv
-    env = kls(grid_size=(20, 10), tetrominoes=tetrominoes, render_mode=render_mode)
+    env = gym.make(
+        args.env_name,
+        grid_size=(20, 10),
+        tetrominoes=tetrominoes,
+        render_mode=render_mode,
+    )
     env = DummyVecEnv([lambda: Monitor(env)])
 
     if args.random:

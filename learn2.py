@@ -11,6 +11,7 @@ import argparse
 import sys
 from pathlib import Path
 
+import gymnasium as gym
 import torch
 import torch.nn as nn
 from gymnasium import spaces
@@ -27,7 +28,7 @@ from stable_baselines3.common.vec_env import (DummyVecEnv, SubprocVecEnv,
                                               VecEnv, VecFrameStack,
                                               VecMonitor)
 
-from tetrisenv import MyTetrisEnv2
+import tetrisenv
 
 
 class EpisodeEndMetricsCallback(BaseCallback):
@@ -241,11 +242,16 @@ def learn():
         "--num-envs", type=int, default=4, help="Number of environments"
     )
     parser.add_argument("--subproc", action="store_true", help="Use SubprocVecEnv")
+    parser.add_argument(
+        "--env-name", type=str, default="Tetris-v3", help="Environment name"
+    )
     args = parser.parse_args()
 
     # Create the environment
     tetrominoes = ["I", "O", "T", "L", "J"]
-    env = MyTetrisEnv2(grid_size=(20, 10), tetrominoes=tetrominoes, render_mode="human")
+    env = gym.make(
+        args.env_name, grid_size=(20, 10), tetrominoes=tetrominoes, render_mode="human"
+    )
     if args.subproc:
         env = make_vec_env(lambda: env, n_envs=args.num_envs, vec_env_cls=SubprocVecEnv)
     else:
