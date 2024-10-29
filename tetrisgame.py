@@ -16,6 +16,17 @@ import numpy as np
 
 @unique
 class Actions(IntEnum):
+    """
+    Enum class representing possible actions in the Tetris game.
+
+    Attributes:
+        LEFT (int): Action to move the piece to the left.
+        RIGHT (int): Action to move the piece to the right.
+        ROTATE (int): Action to rotate the piece.
+        HARD_DROP (int): Action to perform a hard drop of the piece.
+        # DROP (int): Action to perform a drop of the piece.
+    """
+
     LEFT = 0
     RIGHT = 1
     ROTATE = 2
@@ -25,6 +36,16 @@ class Actions(IntEnum):
 
 @unique
 class Rotation(IntEnum):
+    """
+    An enumeration representing the four possible rotation states for Tetris pieces.
+
+    Attributes:
+        R000 (int): Represents a 0-degree rotation.
+        R090 (int): Represents a 90-degree rotation.
+        R180 (int): Represents a 180-degree rotation.
+        R270 (int): Represents a 270-degree rotation.
+    """
+
     R000 = 0
     R090 = 1
     R180 = 2
@@ -72,7 +93,7 @@ class TetrisGame:
         shape[shape == 1] = TETROMINOES_COLOR.get(tetromino, 1)
 
     # Naive rotations, some elements only have 2 rotations
-    TETROMINOES_ROT = defaultdict(dict)
+    TETROMINOES_ROT: defaultdict[str, dict[Rotation, np.ndarray]] = defaultdict(dict)
     for tetromino, shape in TETROMINOES.items():
         for rotation in Rotation:
             TETROMINOES_ROT[tetromino][rotation] = np.rot90(shape, rotation)
@@ -83,7 +104,7 @@ class TetrisGame:
         self.grid_size = grid_size
         self.board_height, self.board_width = grid_size
         self.tetrominoes = tetrominoes or list(self.TETROMINOES.keys())
-        self.rng = rng if rng is not None else np.random.RandomState()
+        self.rng = rng if rng is not None else np.random.default_rng()
         self.ticks_per_drop = ticks_per_drop
 
         # Game state
@@ -193,7 +214,7 @@ class TetrisGame:
                 if self.current_piece is None:
                     game_over = True
 
-        return self.get_state(), game_over, drop_distance, lines_cleared # piece_placed
+        return self.get_state(), game_over, drop_distance, lines_cleared  # piece_placed
 
     def _get_next_tetromino(self):
         """Get the next tetromino piece."""
@@ -377,6 +398,18 @@ def ascii_render(observation):
 
 
 def play_tetris():
+    """
+    Play a game of Tetris.
+
+    This function initializes a Tetris game, continuously renders the game state,
+    randomly selects actions, and updates the game state until the game is terminated.
+    The game speed is controlled by a sleep interval.
+
+    The game state is rendered in ASCII format.
+
+    Raises:
+        Exception: If an error occurs during the game execution.
+    """
     game = TetrisGame()
     terminated = False
     try:

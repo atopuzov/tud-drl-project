@@ -7,9 +7,13 @@ In no event shall the authors be liable for any damages arising from the use
 of this software.
 """
 
+import argparse
 import sys
 from pathlib import Path
 
+import torch
+import torch.nn as nn
+from gymnasium import spaces
 from stable_baselines3 import DQN, PPO
 from stable_baselines3.common.callbacks import (BaseCallback,
                                                 CheckpointCallback,
@@ -20,12 +24,10 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.vec_env import (DummyVecEnv, SubprocVecEnv,
-                                              VecFrameStack, VecMonitor)
+                                              VecEnv, VecFrameStack,
+                                              VecMonitor)
 
 from tetrisenv import MyTetrisEnv2
-from gymnasium import spaces
-import torch.nn as nn
-import torch
 
 
 class EpisodeEndMetricsCallback(BaseCallback):
@@ -69,7 +71,7 @@ class TetrisFeatureExtractor(BaseFeaturesExtractor):
         self.cnn = nn.Sequential(
             nn.Conv2d(n_chan, 16, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.Flatten()
+            nn.Flatten(),
         )
 
         # TODO: Verify
@@ -77,10 +79,7 @@ class TetrisFeatureExtractor(BaseFeaturesExtractor):
             example_input = torch.zeros(1, n_chan, board_height, board_width)
             cnn_output_dim = self.cnn(example_input).shape[1]
 
-        self.linear = nn.Sequential(
-            nn.Linear(cnn_output_dim, features_dim),
-            nn.ReLU()
-        )
+        self.linear = nn.Sequential(nn.Linear(cnn_output_dim, features_dim), nn.ReLU())
 
     def forward(self, observations) -> torch.Tensor:
         # Process board through CNN and linear
@@ -93,7 +92,20 @@ tetris_model = "tetris_model.zip"
 checkpoint_path = "models"
 
 
-def continue_learning(args, env):
+def continue_learning(args: argparse.Namespace, env: VecEnv):
+    """
+    Continue the learning process for a given environment and model.
+    Args:
+        args (argparse.Namespace): Command-line arguments containing model file path,
+                                   replay buffer file path, and other configurations.
+        env (VecEnv): The environment in which the model will be trained.
+    Raises:
+        SystemExit: If the specified model file cannot be found.
+    Notes:
+        - Loads a pre-trained DQN model from the specified file.
+        - If the replay buffer file is provided, it loads the replay buffer into the model.
+        - Calls the `do_z_learning` function to continue the learning process.
+    """
     try:
         model = DQN.load(tetris_model, env=env, tensorboard_log=log_path)
     except FileNotFoundError:
@@ -103,12 +115,30 @@ def continue_learning(args, env):
     if args.load_replay:
         model.load_replay_buffer(args.replay_buffer_file)
 
+    do_z_learning(args, env, model)
 
-def start_learning(args, env):
+
+def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
+    """
+    Initializes and starts the learning process for a given environment using the DQN algorithm.
+    Args:
+        args (argparse.Namespace): Command-line arguments passed to the script.
+        env: (VecEnv): The environment in which the agent will learn.
+    Returns:
+        None
+    """
     policy_kwargs = {
-        'features_extractor_class': TetrisFeatureExtractor,
-        "net_arch": [128, 128]  # MLP architecture after feature extraction
+        "features_extractor_class": TetrisFeatureExtractor,
+        "net_arch": [128, 128],  # MLP architecture after feature extraction
     }
+
+    # TODO: See if it makes a difference (except on big convolutions)
+    device = "cpu"
+    if torch.backends.mps.is_available():
+        device = "mps"
+    elif torch.cuda.is_available():
+        device = "cuda"
+    device = "cpu"
 
     model = DQN(
         "MlpPolicy",
@@ -127,8 +157,21 @@ def start_learning(args, env):
         # exploration_final_eps=0.1, # try with 0.05/0.1
         verbose=1,
         tensorboard_log=log_path,
+        device=device,
     )
 
+    do_z_learning(args, env, model)
+
+
+def do_z_learning(args: argparse.Namespace, env: VecEnv, model) -> None:
+    """
+    Perform the learning process for the Tetris model.
+
+    Args:
+        args (argparse.Namespace): The command-line arguments.
+        env: (VecEnv): The environment for the model to interact with.
+        model: The model to be trained.
+    """
     best_model = "best_model"
     eval_callback = EvalCallback(env, eval_freq=10000, best_model_save_path=best_model)
 
@@ -163,7 +206,6 @@ def start_learning(args, env):
 
 
 def learn():
-    import argparse
 
     parser = argparse.ArgumentParser(description="Game of Tetris")
     group = parser.add_mutually_exclusive_group()
@@ -196,18 +238,16 @@ def learn():
     )
     # TODO:
     parser.add_argument(
-        "--num-envs", type=int, default=1, help="Number of environments"
+        "--num-envs", type=int, default=4, help="Number of environments"
     )
     parser.add_argument("--subproc", action="store_true", help="Use SubprocVecEnv")
     args = parser.parse_args()
 
     # Create the environment
     tetrominoes = ["I", "O", "T", "L", "J"]
-    env = MyTetrisEnv2(
-        grid_size=(20, 10), tetrominoes=tetrominoes, render_mode="human"
-    )
+    env = MyTetrisEnv2(grid_size=(20, 10), tetrominoes=tetrominoes, render_mode="human")
     if args.subproc:
-        env = make_vec_env(env, n_envs=args.num_envs, vec_env_cls=SubprocVecEnv)
+        env = make_vec_env(lambda: env, n_envs=args.num_envs, vec_env_cls=SubprocVecEnv)
     else:
         env = DummyVecEnv([lambda: Monitor(env)])
 

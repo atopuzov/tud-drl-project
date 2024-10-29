@@ -9,8 +9,8 @@ of this software.
 
 from stable_baselines3.common.env_checker import check_env
 
-from tetrisenv import (BaseRewardTetrisEnv, MyTetrisEnv,
-                       StandardReward2TetrisEnv, StandardRewardTetrisEnv, MyTetrisEnv2)
+from tetrisenv import (BaseRewardTetrisEnv, MyTetrisEnv, MyTetrisEnv2,
+                       StandardReward2TetrisEnv, StandardRewardTetrisEnv)
 
 if __name__ == "__main__":
     print("Checking the base env ...")

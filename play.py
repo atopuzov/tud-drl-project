@@ -18,7 +18,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-from tetrisenv import StandardRewardTetrisEnv
+from tetrisenv import MyTetrisEnv2, StandardRewardTetrisEnv
 from tetrisgame import Actions
 
 if __name__ == "__main__":
@@ -41,9 +41,10 @@ if __name__ == "__main__":
     render_mode = "pygame" if args.pygame else "ansi"
 
     tetrominoes = ["I", "O", "T", "L", "J"]
-    env = StandardRewardTetrisEnv(
-        grid_size=(20, 10), tetrominoes=tetrominoes, render_mode=render_mode
-    )
+    # TODO: Register gym environments and use by name
+    kls = MyTetrisEnv2
+    # kls = StandardRewardTetrisEnv
+    env = kls(grid_size=(20, 10), tetrominoes=tetrominoes, render_mode=render_mode)
     env = DummyVecEnv([lambda: Monitor(env)])
 
     if args.random:

@@ -57,6 +57,7 @@ class BaseRewardTetrisEnv(gym.Env):
             self.renderer = TetrisRGBArrayRenderer()
 
     def reset(self, seed=None, options=None):
+        """Reset the environment to start a new game."""
         super().reset(seed=seed)
         if seed is not None:
             self.game = TetrisGame(
@@ -98,6 +99,7 @@ class BaseRewardTetrisEnv(gym.Env):
         return 1 if not game_over else -100
 
     def render(self):
+        """Render the current state of the game."""
         if self.renderer is not None:
             return self.renderer.render(self.state)
 
@@ -122,11 +124,13 @@ class StandardRewardTetrisEnv(BaseRewardTetrisEnv):
         self.score = 0
 
     def reset(self, *args, **kwargs):
+        """Reset the environment to start a new game."""
         self.fitness = 0
         self.score = 0
         return super().reset(*args, **kwargs)
 
     def calculate_reward(self, game_over, drop_distance, lines_cleared):
+        """Custom reward function."""
         reward = 0
         holes = self.state["metrics"]["holes"]
         bumpiness = self.state["metrics"]["bumpiness"]
@@ -151,15 +155,20 @@ class StandardRewardTetrisEnv(BaseRewardTetrisEnv):
 
 
 class StandardReward2TetrisEnv(StandardRewardTetrisEnv):
+    """Tetris environment with standard scoring-based rewards but more for lines"""
+
     LINE_REWARD = [0, 100, 250, 400, 550]
 
     def calculate_reward(self, game_over, drop_distance, lines_cleared):
+        """Custom reward function."""
         reward = super().calculate_reward(game_over, drop_distance, lines_cleared)
         reward += self.LINE_REWARD[lines_cleared]
         return reward
 
 
 class MyTetrisEnv(BaseRewardTetrisEnv):
+    """Tetris environment with custom rewards."""
+
     GAME_OVER_REWARD = -100
     PLACED_REWARD = 0.5
     LINE_REWARD = [0, 100, 250, 400, 550]
@@ -174,12 +183,14 @@ class MyTetrisEnv(BaseRewardTetrisEnv):
         self.max_height = 0
 
     def reset(self, *args, **kwargs):
+        """Reset the environment to start a new game."""
         self.bumpiness = 0
         self.holes = 0
         self.max_height = 0
         return super().reset(*args, **kwargs)
 
     def calculate_reward(self, game_over, drop_distance, lines_cleared):
+        """Custom reward function."""
         reward = 0
         reward += drop_distance
 
@@ -209,6 +220,8 @@ class MyTetrisEnv(BaseRewardTetrisEnv):
 
 
 class MyTetrisEnv2(BaseRewardTetrisEnv):
+    """Tetris environment with custom rewards and RGB array observations."""
+
     GAME_OVER_REWARD = -100
     PLACED_REWARD = 0.5
     LINE_REWARD = [0, 100, 250, 400, 550]
@@ -222,13 +235,17 @@ class MyTetrisEnv2(BaseRewardTetrisEnv):
         # You might need to use a custom features extractor cf.
         # FIX: np.kron(array, np.ones(2,2)) -> scale 2x
         self.observation_space = spaces.Box(
-            low=0, high=255, shape=(1, self.grid_size[0], self.grid_size[1]), dtype=np.uint8
+            low=0,
+            high=255,
+            shape=(1, self.grid_size[0], self.grid_size[1]),
+            dtype=np.uint8,
         )
         self.bumpiness = 0
         self.holes = 0
         self.max_height = 0
 
     def reset(self, *args, **kwargs):
+        """Reset the environment to start a new game."""
         self.bumpiness = 0
         self.holes = 0
         self.max_height = 0
@@ -243,6 +260,7 @@ class MyTetrisEnv2(BaseRewardTetrisEnv):
         return np.expand_dims(grid, axis=0).astype(np.uint8)
 
     def calculate_reward(self, game_over, drop_distance, lines_cleared):
+        """Custom reward function."""
         reward = 0
         reward += drop_distance
 

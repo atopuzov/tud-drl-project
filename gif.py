@@ -16,7 +16,7 @@ from stable_baselines3 import DQN
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-from tetrisenv import StandardRewardTetrisEnv
+from tetrisenv import MyTetrisEnv2, StandardRewardTetrisEnv
 
 if __name__ == "__main__":
     import argparse
@@ -34,9 +34,10 @@ if __name__ == "__main__":
     render_mode = "rgb_array"
 
     tetrominoes = ["I", "O", "T", "L", "J"]
-    env = StandardRewardTetrisEnv(
-        grid_size=(20, 10), tetrominoes=tetrominoes, render_mode=render_mode
-    )
+    # TODO: Register gym environments and use by name
+    kls = MyTetrisEnv2
+    # kls = StandardRewardTetrisEnv
+    env = kls(grid_size=(20, 10), tetrominoes=tetrominoes, render_mode=render_mode)
     env = DummyVecEnv([lambda: Monitor(env)])
 
     images = Path("images")

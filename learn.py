@@ -22,7 +22,7 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.vec_env import (DummyVecEnv, SubprocVecEnv,
                                               VecFrameStack, VecMonitor)
 
-from tetrisenv import StandardRewardTetrisEnv, StandardReward2TetrisEnv
+from tetrisenv import StandardReward2TetrisEnv, StandardRewardTetrisEnv
 
 
 class EpisodeEndMetricsCallback(BaseCallback):
@@ -164,7 +164,7 @@ def learn():
         grid_size=(20, 10), tetrominoes=tetrominoes, render_mode="human"
     )
     if args.subproc:
-        env = make_vec_env(env, n_envs=args.num_envs, vec_env_cls=SubprocVecEnv)
+        env = make_vec_env(lambda: env, n_envs=args.num_envs, vec_env_cls=SubprocVecEnv)
     else:
         env = DummyVecEnv([lambda: Monitor(env)])
 
