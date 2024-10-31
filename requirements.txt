@@ -15,6 +15,10 @@ pygame
 # We expect that some modules will need time to support NumPy 2.
 numpy<2
 
+# Visualizations
+torchviz
+torchsummary
+
 # Tools
 pytest
 jupyterlab
