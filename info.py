@@ -8,26 +8,19 @@ of this software.
 """
 
 import argparse
-
-from collections import OrderedDict
 import sys
-
+from collections import OrderedDict
 from pathlib import Path
 
-from stable_baselines3 import DQN
 import torch
+from stable_baselines3 import DQN
 from torchviz import make_dot
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Game of Tetris")
     group = parser.add_mutually_exclusive_group()
-    group.add_argument(
-        "--model-file", type=Path, default="tetris_model.zip", help="Model file"
-    )
-    parser.add_argument(
-        "--env-name", type=str, default="Tetris-v3", help="Use SubprocVecEnv"
-    )
+    group.add_argument("--model-file", type=Path, default="tetris_model.zip", help="Model file")
+    parser.add_argument("--env-name", type=str, default="Tetris-v3", help="Use SubprocVecEnv")
     args = parser.parse_args()
 
     try:
@@ -104,9 +97,7 @@ if __name__ == "__main__":
     print(f"Action Space: {model.action_space}")
 
     # Get trainable parameters count
-    trainable_params = sum(
-        p.numel() for p in model.policy.parameters() if p.requires_grad
-    )
+    trainable_params = sum(p.numel() for p in model.policy.parameters() if p.requires_grad)
     print(f"\nTrainable Parameters: {trainable_params:,}")
 
     # Policy network weights statistics

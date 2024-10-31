@@ -66,14 +66,10 @@ class TetrisPyGameRenderer(TetrisRenderer):
         window_width = board_width * self.cell_size + self.info_width
         window_height = board_height * self.cell_size
 
-        self.window = pygame.display.set_mode(
-            (window_width, window_height), pygame.DOUBLEBUF
-        )
+        self.window = pygame.display.set_mode((window_width, window_height), pygame.DOUBLEBUF)
         self.font = pygame.font.Font(None, 36)
         self.info_font = pygame.font.Font(None, 24)
-        self.grid_surface = pygame.Surface(
-            (board_width * self.cell_size, board_height * self.cell_size)
-        )
+        self.grid_surface = pygame.Surface((board_width * self.cell_size, board_height * self.cell_size))
 
     def render(self, state: Dict) -> None:
         """Render the current game state"""
@@ -143,44 +139,32 @@ class TetrisPyGameRenderer(TetrisRenderer):
         self.window.blit(score_text, (info_x, info_y))
 
         # Draw lines cleared
-        lines_text = self.info_font.render(
-            f"Lines: {state['lines_cleared']}", True, (255, 255, 255)
-        )
+        lines_text = self.info_font.render(f"Lines: {state['lines_cleared']}", True, (255, 255, 255))
         self.window.blit(lines_text, (info_x, info_y + lines * line_height))
         lines += 1
 
         # Draw pieces placed
-        pieces_text = self.info_font.render(
-            f"Pieces: {state['pieces_placed']}", True, (255, 255, 255)
-        )
+        pieces_text = self.info_font.render(f"Pieces: {state['pieces_placed']}", True, (255, 255, 255))
         self.window.blit(pieces_text, (info_x, info_y + lines * line_height))
         lines += 1
 
         # Draw bumpiness
-        pieces_text = self.info_font.render(
-            f"Bumpiness: {state['metrics']['bumpiness']}", True, (255, 255, 255)
-        )
+        pieces_text = self.info_font.render(f"Bumpiness: {state['metrics']['bumpiness']}", True, (255, 255, 255))
         self.window.blit(pieces_text, (info_x, info_y + lines * line_height))
         lines += 1
 
         # Draw holes
-        pieces_text = self.info_font.render(
-            f"Holes: {state['metrics']['holes']}", True, (255, 255, 255)
-        )
+        pieces_text = self.info_font.render(f"Holes: {state['metrics']['holes']}", True, (255, 255, 255))
         self.window.blit(pieces_text, (info_x, info_y + lines * line_height))
         lines += 1
 
         # Draw max height
-        pieces_text = self.info_font.render(
-            f"Max height: {state['metrics']['max_height']}", True, (255, 255, 255)
-        )
+        pieces_text = self.info_font.render(f"Max height: {state['metrics']['max_height']}", True, (255, 255, 255))
         self.window.blit(pieces_text, (info_x, info_y + lines * line_height))
         lines += 1
 
         # Draw min height
-        pieces_text = self.info_font.render(
-            f"Min height: {state['metrics']['min_height']}", True, (255, 255, 255)
-        )
+        pieces_text = self.info_font.render(f"Min height: {state['metrics']['min_height']}", True, (255, 255, 255))
         self.window.blit(pieces_text, (info_x, info_y + lines * line_height))
         lines += 1
 
@@ -274,9 +258,7 @@ class TetrisRGBArrayRenderer(TetrisRenderer):
         for y in range(self.board_height):
             for x in range(self.board_width):
                 cell_value = grid[y, x]
-                color = self.COLORS.get(
-                    cell_value, (0, 0, 0)
-                )  # Default to black for empty cells
+                color = self.COLORS.get(cell_value, (0, 0, 0))  # Default to black for empty cells
                 self._draw_cell(rgb_array, x, y, color)
 
         # Draw grid lines
@@ -325,8 +307,7 @@ def play_tetris_pygame(game) -> None:
             # Handle PyGame events
             for event in pygame.event.get():
                 if event.type == pygame.QUIT or (
-                    event.type == pygame.KEYDOWN
-                    and event.key in (pygame.K_ESCAPE, pygame.K_q)
+                    event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_q)
                 ):
                     terminated = True
                 elif event.type == pygame.KEYDOWN:

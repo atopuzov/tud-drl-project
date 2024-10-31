@@ -26,9 +26,7 @@ def convert_board_to_array(board_str):
 
     array = np.zeros((height, width), dtype=int)
     for i, line in enumerate(lines[1:-1]):  # Skip the first and last lines (borders)
-        for j, char in enumerate(
-            line[1:-1]
-        ):  # Skip the first and last characters (borders)
+        for j, char in enumerate(line[1:-1]):  # Skip the first and last characters (borders)
             if char in ("█", "#", "x"):
                 array[i, j] = 1
             elif char in (".", " "):
@@ -344,9 +342,7 @@ def test_hard_drop_no_movement():
 def test_analyze_board_empty():
     game = TetrisGame()
     game.reset()
-    bumpiness, holes, column_heights, min_height, max_height, sum_height = (
-        game._analyze_board()
-    )
+    bumpiness, holes, column_heights, min_height, max_height, sum_height = game._analyze_board()
     assert bumpiness == 0
     assert holes == 0
     assert np.all(column_heights == 0)
@@ -362,9 +358,7 @@ def test_analyze_board():
     print(game.grid)
     print(game.grid.shape)
 
-    bumpiness, holes, column_heights, min_height, max_height, sum_height = (
-        game._analyze_board()
-    )
+    bumpiness, holes, column_heights, min_height, max_height, sum_height = game._analyze_board()
     assert bumpiness == 15
     assert holes == 1
     assert min_height == 2

@@ -98,9 +98,7 @@ class TetrisGame:
         for rotation in Rotation:
             TETROMINOES_ROT[tetromino][rotation] = np.rot90(shape, rotation)
 
-    def __init__(
-        self, grid_size=(20, 10), tetrominoes=None, rng=None, ticks_per_drop=1
-    ):
+    def __init__(self, grid_size=(20, 10), tetrominoes=None, rng=None, ticks_per_drop=1):
         self.grid_size = grid_size
         self.board_height, self.board_width = grid_size
         self.tetrominoes = tetrominoes or list(self.TETROMINOES.keys())
@@ -260,12 +258,7 @@ class TetrisGame:
         y, x = position
         height, width = tetromino.shape
 
-        if (
-            y < 0
-            or y + height > self.board_height
-            or x < 0
-            or x + width > self.board_width
-        ):
+        if y < 0 or y + height > self.board_height or x < 0 or x + width > self.board_width:
             return False
 
         for i, row in enumerate(tetromino):
@@ -417,9 +410,7 @@ def play_tetris():
         while not terminated:
             ascii_render(observation)  # Render the game state
             action = game.rng.choice(list(Actions))
-            observation, terminated, _, _ = game.step(
-                action
-            )  # Take a step in the environment
+            observation, terminated, _, _ = game.step(action)  # Take a step in the environment
             time.sleep(0.05)  # Control game speed
     finally:
         ascii_render(observation)  # Render final game state

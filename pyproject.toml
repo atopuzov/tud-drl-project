@@ -1,0 +1,30 @@
+[tool.black]
+line-length = 120
+target-version = ['py311']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.pylint.FORMAT]
+max-line-length = 120
+
+
+[tool.isort]
+profile = "black"
+line_length = 120
+combine_as_imports = true
+
+[tool.mypy]
+python_version = "3.11"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120

@@ -14,8 +14,7 @@ import numpy as np
 from gymnasium import spaces
 
 from tetrisgame import Actions, TetrisGame
-from tetrisrenderer import (TetrisASCIIRenderer, TetrisPyGameRenderer,
-                            TetrisRGBArrayRenderer)
+from tetrisrenderer import TetrisASCIIRenderer, TetrisPyGameRenderer, TetrisRGBArrayRenderer
 
 env_kwargs = {
     "grid_size": (20, 10),
@@ -23,12 +22,8 @@ env_kwargs = {
     "render_mode": None,
     "ticks_per_drop": 1,
 }
-gym.register(
-    "Tetris-v0", entry_point="tetrisenv:StandardRewardTetrisEnv", kwargs=env_kwargs
-)
-gym.register(
-    "Tetris-v1", entry_point="tetrisenv:StandardReward2TetrisEnv", kwargs=env_kwargs
-)
+gym.register("Tetris-v0", entry_point="tetrisenv:StandardRewardTetrisEnv", kwargs=env_kwargs)
+gym.register("Tetris-v1", entry_point="tetrisenv:StandardReward2TetrisEnv", kwargs=env_kwargs)
 gym.register("Tetris-v2", entry_point="tetrisenv:MyTetrisEnv", kwargs=env_kwargs)
 gym.register("Tetris-v3", entry_point="tetrisenv:MyTetrisEnv2", kwargs=env_kwargs)
 
@@ -41,9 +36,7 @@ class BaseRewardTetrisEnv(gym.Env):
         "render_fps": 4,
     }
 
-    def __init__(
-        self, grid_size=(20, 10), tetrominoes=None, render_mode=None, ticks_per_drop=1
-    ):
+    def __init__(self, grid_size=(20, 10), tetrominoes=None, render_mode=None, ticks_per_drop=1):
         super().__init__()
 
         self.render_mode = render_mode
@@ -62,9 +55,7 @@ class BaseRewardTetrisEnv(gym.Env):
         # self.observation_space = spaces.Box(
         #     low=0, high=1, shape=grid_size, dtype=np.int32
         # )
-        self.observation_space = spaces.Box(
-            low=0, high=1, shape=(grid_size[0] * grid_size[1],), dtype=np.int32
-        )
+        self.observation_space = spaces.Box(low=0, high=1, shape=(grid_size[0] * grid_size[1],), dtype=np.int32)
 
         self.renderer = None
         if self.render_mode in {"pygame", "human"}:
@@ -154,9 +145,7 @@ class StandardRewardTetrisEnv(BaseRewardTetrisEnv):
         bumpiness = self.state["metrics"]["bumpiness"]
         height = self.state["metrics"]["sum_height"]
 
-        new_fitness = (
-            -0.51 * height + 0.76 * lines_cleared - 0.36 * holes - 0.18 * bumpiness
-        )
+        new_fitness = -0.51 * height + 0.76 * lines_cleared - 0.36 * holes - 0.18 * bumpiness
         change_in_fitness = new_fitness - self.fitness
         self.fitness = new_fitness
         reward += change_in_fitness
@@ -315,9 +304,7 @@ def clear_screen():
 # Example usage
 def play_tetris():
     """Main function to run the Tetris environment."""
-    env = StandardRewardTetrisEnv(
-        render_mode="ascii"
-    )  # Initialize the Tetris environment
+    env = StandardRewardTetrisEnv(render_mode="ascii")  # Initialize the Tetris environment
     observation, info = env.reset()  # Reset the environment to start a new game
 
     terminated = False
@@ -326,9 +313,7 @@ def play_tetris():
             clear_screen()  # Clear the console screen
             env.render()  # Render the game state
             action = env.action_space.sample()  # Sample a random action
-            observation, reward, terminated, truncated, info = env.step(
-                action
-            )  # Take a step in the environment
+            observation, reward, terminated, truncated, info = env.step(action)  # Take a step in the environment
             time.sleep(0.05)  # Control game speed
     finally:
         clear_screen()  # Clear the screen before exiting

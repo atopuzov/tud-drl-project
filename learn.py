@@ -11,16 +11,17 @@ import sys
 from pathlib import Path
 
 from stable_baselines3 import DQN, PPO
-from stable_baselines3.common.callbacks import (BaseCallback,
-                                                CheckpointCallback,
-                                                EvalCallback,
-                                                StopTrainingOnRewardThreshold)
+from stable_baselines3.common.callbacks import (
+    BaseCallback,
+    CheckpointCallback,
+    EvalCallback,
+    StopTrainingOnRewardThreshold,
+)
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-from stable_baselines3.common.vec_env import (DummyVecEnv, SubprocVecEnv,
-                                              VecFrameStack, VecMonitor)
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecFrameStack, VecMonitor
 
 from tetrisenv import StandardReward2TetrisEnv, StandardRewardTetrisEnv
 
@@ -63,9 +64,7 @@ def continue_learning(args, env):
 
 
 def start_learning(args, env):
-    policy_kwargs = {
-        "net_arch": [128, 128]  # MLP architecture after feature extraction
-    }
+    policy_kwargs = {"net_arch": [128, 128]}  # MLP architecture after feature extraction
 
     model = DQN(
         "MlpPolicy",
@@ -134,17 +133,11 @@ def learn():
         default=Path("replay_buffer.zip"),
         help="Replay buffer file",
     )
-    parser.add_argument(
-        "--timestamps", type=int, default=10e4, help="Number of timestumps"
-    )
-    parser.add_argument(
-        "--model-file", type=Path, default="tetris_model.zip", help="Model file"
-    )
+    parser.add_argument("--timestamps", type=int, default=10e4, help="Number of timestumps")
+    parser.add_argument("--model-file", type=Path, default="tetris_model.zip", help="Model file")
     # Checkpoints
     parser.add_argument("--checkpoint", action="store_true", help="Checkpoint models")
-    parser.add_argument(
-        "--checkpoint-interval", type=int, default=10000, help="Checkpoint interval"
-    )
+    parser.add_argument("--checkpoint-interval", type=int, default=10000, help="Checkpoint interval")
     parser.add_argument(
         "--checkpoint-prefix",
         type=str,
@@ -152,17 +145,13 @@ def learn():
         help="Model file name prefix for checkpointing",
     )
     # TODO:
-    parser.add_argument(
-        "--num-envs", type=int, default=1, help="Number of environments"
-    )
+    parser.add_argument("--num-envs", type=int, default=1, help="Number of environments")
     parser.add_argument("--subproc", action="store_true", help="Use SubprocVecEnv")
     args = parser.parse_args()
 
     # Create the environment
     tetrominoes = ["I", "O", "T", "L", "J"]
-    env = StandardReward2TetrisEnv(
-        grid_size=(20, 10), tetrominoes=tetrominoes, render_mode="human"
-    )
+    env = StandardReward2TetrisEnv(grid_size=(20, 10), tetrominoes=tetrominoes, render_mode="human")
     if args.subproc:
         env = make_vec_env(lambda: env, n_envs=args.num_envs, vec_env_cls=SubprocVecEnv)
     else:

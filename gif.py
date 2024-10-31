@@ -22,17 +22,11 @@ import tetrisenv
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Game of Tetris")
-    parser.add_argument(
-        "--delay", type=float, default=0.01, help="Delay between frames"
-    )
+    parser.add_argument("--delay", type=float, default=0.01, help="Delay between frames")
     group = parser.add_mutually_exclusive_group()
-    group.add_argument(
-        "--model-file", type=Path, default="tetris_model.zip", help="Model file"
-    )
+    group.add_argument("--model-file", type=Path, default="tetris_model.zip", help="Model file")
     group.add_argument("--random", action="store_true", help="Use a random agent")
-    parser.add_argument(
-        "--env-name", type=str, default="Tetris-v3", help="Environment name"
-    )
+    parser.add_argument("--env-name", type=str, default="Tetris-v3", help="Environment name")
     args = parser.parse_args()
     render_mode = "rgb_array"
 
