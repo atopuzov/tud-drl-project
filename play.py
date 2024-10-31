@@ -19,7 +19,6 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 
 import tetrisenv  # noqa: F401  # pylint: disable=unused-import
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Game of Tetris")
     parser.add_argument("--delay", type=float, default=0.01, help="Delay between frames")

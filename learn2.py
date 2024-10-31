@@ -11,9 +11,7 @@ import argparse
 import sys
 from pathlib import Path
 
-import gymnasium as gym
 import torch
-import torch.nn as nn
 from gymnasium import spaces
 from stable_baselines3 import DQN, PPO
 from stable_baselines3.common.callbacks import (
@@ -23,12 +21,11 @@ from stable_baselines3.common.callbacks import (
     StopTrainingOnRewardThreshold,
 )
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecEnv, VecFrameStack, VecMonitor
 
 import tetrisenv
+from customcnn import TetrisFeatureExtractor
 
 
 class EpisodeEndMetricsCallback(BaseCallback):
@@ -50,42 +47,6 @@ class EpisodeEndMetricsCallback(BaseCallback):
                 self.logger.record("episode/score", score)
                 self.logger.record("episode/lines_cleared", lines_cleared)
         return True
-
-
-class TetrisFeatureExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space: spaces.Dict, features_dim: int = 128):
-        super().__init__(observation_space, features_dim)
-        (n_chan, board_height, board_width) = observation_space.shape
-
-        # CNN for board processing TODO: needs tuning
-        # TODO: add pooling layer
-        # self.cnn = nn.Sequential(
-        #     nn.Conv2d(n_chan, 32, kernel_size=3, stride=1, padding=1),
-        #     nn.ReLU(),
-        #     nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
-        #     nn.ReLU(),
-        #     nn.Flatten()
-        # )
-
-        # TODO: reduce kernel size -> 2
-        # TODO: stride - 2 (downscale)
-        self.cnn = nn.Sequential(
-            nn.Conv2d(n_chan, 16, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Flatten(),
-        )
-
-        # TODO: Verify
-        with torch.no_grad():  # Don't track operations, we just need to calculate the output size
-            example_input = torch.zeros(1, n_chan, board_height, board_width)
-            cnn_output_dim = self.cnn(example_input).shape[1]
-
-        self.linear = nn.Sequential(nn.Linear(cnn_output_dim, features_dim), nn.ReLU())
-
-    def forward(self, observations) -> torch.Tensor:
-        # Process board through CNN and linear
-        board_features = self.cnn(observations)
-        return self.linear(board_features)
 
 
 log_path = "logs"
@@ -239,11 +200,15 @@ def learn():
 
     # Create the environment
     tetrominoes = ["I", "O", "T", "L", "J"]
-    env = gym.make(args.env_name, grid_size=(20, 10), tetrominoes=tetrominoes, render_mode="human")
-    if args.subproc:
-        env = make_vec_env(lambda: env, n_envs=args.num_envs, vec_env_cls=SubprocVecEnv)
-    else:
-        env = DummyVecEnv([lambda: Monitor(env)])
+
+    env_kwargs = {
+        "grid_size": (20, 10),
+        "tetrominoes": tetrominoes,
+        "render_mode": "human",
+    }
+
+    vec_env_cls = SubprocVecEnv if args.subproc else DummyVecEnv
+    env = make_vec_env(args.env_name, env_kwargs=env_kwargs, n_envs=args.num_envs, vec_env_cls=vec_env_cls)
 
     if args.new:
         start_learning(args, env)

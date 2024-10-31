@@ -32,4 +32,4 @@ pyenv-install:
 
 .PHONY: mp4
 mp4:
-	ffmpeg -i images/tetris.gif tetris.mp4
+	ffmpeg -i images/tetris.gif -level 3.0 -profile:v baseline -vcodec libx264 -pix_fmt yuv420p -movflags +faststart tetris.mp4
