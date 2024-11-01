@@ -207,7 +207,7 @@ class MyTetrisEnv(BaseRewardTetrisEnv):
 
         delta_bumpiness = bumpiness - self.bumpiness
         delta_holes = holes - self.holes
-        delta_max_height = max_height - max_height
+        delta_max_height = max_height - self.max_height
 
         # Penalties for creating holes or increasing bumpiness
         reward += delta_holes * self.HOLE_PENALTY
@@ -222,6 +222,11 @@ class MyTetrisEnv(BaseRewardTetrisEnv):
 
         # if piece_placed:
         #     reward += self.PLACED_REWARD
+
+        reward += self.LINE_REWARD[lines_cleared]
+
+        if game_over:
+            reward += self.GAME_OVER_REWARD
 
         return reward
 
@@ -261,7 +266,7 @@ class MyTetrisEnv2(BaseRewardTetrisEnv):
     def _get_observation(self) -> np.ndarray:
         """Return the current state of the game grid."""
         grid = self.state["grid"].copy()
-        grid[grid > 0] = 255
+        np.putmask(grid, grid > 0, 255)
         # axis=0 channel first
         # axis=1 channel last
         return np.expand_dims(grid, axis=0).astype(np.uint8)
@@ -277,7 +282,7 @@ class MyTetrisEnv2(BaseRewardTetrisEnv):
 
         delta_bumpiness = bumpiness - self.bumpiness
         delta_holes = holes - self.holes
-        delta_max_height = max_height - max_height
+        delta_max_height = max_height - self.max_height
 
         # Penalties for creating holes or increasing bumpiness
         reward += delta_holes * self.HOLE_PENALTY
@@ -290,8 +295,10 @@ class MyTetrisEnv2(BaseRewardTetrisEnv):
         self.holes = holes
         self.max_height = max_height
 
-        # if piece_placed:
-        #     reward += self.PLACED_REWARD
+        reward += self.LINE_REWARD[lines_cleared]
+
+        if game_over:
+            reward += self.GAME_OVER_REWARD
 
         return reward
 
@@ -305,7 +312,7 @@ def clear_screen():
 def play_tetris():
     """Main function to run the Tetris environment."""
     env = StandardRewardTetrisEnv(render_mode="ascii")  # Initialize the Tetris environment
-    observation, info = env.reset()  # Reset the environment to start a new game
+    _observation, _info = env.reset()  # Reset the environment to start a new game
 
     terminated = False
     try:
@@ -313,7 +320,7 @@ def play_tetris():
             clear_screen()  # Clear the console screen
             env.render()  # Render the game state
             action = env.action_space.sample()  # Sample a random action
-            observation, reward, terminated, truncated, info = env.step(action)  # Take a step in the environment
+            _observation, _reward, terminated, _truncated, info = env.step(action)  # Take a step in the environment
             time.sleep(0.05)  # Control game speed
     finally:
         clear_screen()  # Clear the screen before exiting

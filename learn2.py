@@ -12,20 +12,17 @@ import sys
 from pathlib import Path
 
 import torch
-from gymnasium import spaces
-from stable_baselines3 import DQN, PPO
+from stable_baselines3 import DQN
 from stable_baselines3.common.callbacks import (
     BaseCallback,
     CheckpointCallback,
     EvalCallback,
-    StopTrainingOnRewardThreshold,
 )
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecEnv, VecFrameStack, VecMonitor
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecEnv
 
-import tetrisenv
-from customcnn import TetrisFeatureExtractor
+import tetrisenv  # noqa: F401  # pylint: disable=unused-import
+import customcnn
 
 
 class EpisodeEndMetricsCallback(BaseCallback):
@@ -33,10 +30,17 @@ class EpisodeEndMetricsCallback(BaseCallback):
     Custom callback for logging episode score and lines cleared to TensorBoard only at the end of each game.
     """
 
-    def __init__(self, verbose=0):
-        super(EpisodeEndMetricsCallback, self).__init__(verbose)
-
     def _on_step(self) -> bool:
+        """
+        This method is called at each step of the environment.
+
+        Returns:
+            bool: Always returns True so that the training process continues.
+
+        The method checks if any environment is done (end of episode). If an episode
+        is done, it retrieves the score and lines cleared from the environment's info
+        and logs these metrics to TensorBoard.
+        """
         # Check if any environment is done (end of episode)
         for i, done in enumerate(self.locals["dones"]):
             if done:
@@ -49,9 +53,9 @@ class EpisodeEndMetricsCallback(BaseCallback):
         return True
 
 
-log_path = "logs"
-tetris_model = "tetris_model.zip"
-checkpoint_path = "models"
+LOG_PATH = "logs"
+TETRIS_MODEL = "tetris_model.zip"
+CHECKPOINT_PATH = "models"
 
 
 def continue_learning(args: argparse.Namespace, env: VecEnv):
@@ -69,7 +73,7 @@ def continue_learning(args: argparse.Namespace, env: VecEnv):
         - Calls the `do_z_learning` function to continue the learning process.
     """
     try:
-        model = DQN.load(tetris_model, env=env, tensorboard_log=log_path)
+        model = DQN.load(TETRIS_MODEL, env=env, tensorboard_log=LOG_PATH)
     except FileNotFoundError:
         print(f"Unable to find {args.model_file}")
         sys.exit(-1)
@@ -90,8 +94,9 @@ def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
         None
     """
     policy_kwargs = {
-        "features_extractor_class": TetrisFeatureExtractor,
+        "features_extractor_class": customcnn.TetrisFeatureExtractor1,
         "net_arch": [128, 128],  # MLP architecture after feature extraction
+        "activation_fn": torch.nn.ReLU,
     }
 
     # TODO: See if it makes a difference (except on big convolutions)
@@ -100,7 +105,7 @@ def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
         device = "mps"
     elif torch.cuda.is_available():
         device = "cuda"
-    device = "cpu"
+    # device = "cpu"
 
     model = DQN(
         "MlpPolicy",
@@ -118,7 +123,7 @@ def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
         exploration_final_eps=0.05,
         # exploration_final_eps=0.1, # try with 0.05/0.1
         verbose=1,
-        tensorboard_log=log_path,
+        tensorboard_log=LOG_PATH,
         device=device,
     )
 
@@ -144,7 +149,7 @@ def do_z_learning(args: argparse.Namespace, env: VecEnv, model) -> None:
     if args.checkpoint:
         checkpoint_callback = CheckpointCallback(
             save_freq=args.checkpoint_interval,
-            save_path=checkpoint_path,
+            save_path=CHECKPOINT_PATH,
             name_prefix=args.checkpoint_prefix,
             save_replay_buffer=args.save_replay,
             verbose=1,
@@ -160,11 +165,11 @@ def do_z_learning(args: argparse.Namespace, env: VecEnv, model) -> None:
                 log_interval=100,
                 reset_num_timesteps=False,
             )
-            model.save(tetris_model)
+            model.save(TETRIS_MODEL)
     except KeyboardInterrupt:
         pass
 
-    model.save(tetris_model)
+    model.save(TETRIS_MODEL)
 
 
 def learn():
