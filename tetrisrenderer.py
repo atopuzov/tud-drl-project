@@ -7,6 +7,7 @@ In no event shall the authors be liable for any damages arising from the use
 of this software.
 """
 
+from pathlib import Path
 from typing import Dict, Optional
 
 import numpy as np
@@ -39,6 +40,18 @@ class TetrisRenderer:
         7: "\033[38;5;214m",  # L - Orange
     }
 
+    # Matches MS-DOS version
+    ASCII_COLORS = {
+        0: "",  # Empty
+        1: "\033[31m",  #  - Red
+        2: "\033[34m",  #  - Blue
+        3: "\033[33m",  #  - Yellow
+        4: "\033[32m",  #  - Green
+        5: "\033[96m",  #  - Cyan
+        6: "\033[37m",  #  - White
+        7: "\033[35m",  #  - Purple
+    }
+
 
 class TetrisPyGameRenderer(TetrisRenderer):
     """PyGame-based renderer for Tetris"""
@@ -52,13 +65,20 @@ class TetrisPyGameRenderer(TetrisRenderer):
         self.grid_surface = None
         self.board_width = None
         self.board_height = None
+        self.music = Path("tetris.mp3")
 
     def initialize(self, board_width: int, board_height: int) -> None:
         """Initialize PyGame window and surfaces"""
         import pygame
+        from pygame import mixer
 
         pygame.init()
+        mixer.init()
         pygame.display.set_caption("Tetris")
+
+        if self.music.exists():
+            mixer.music.load(self.music)
+            mixer.music.play(loops=-1)  # Play the music in loop
 
         self.board_width = board_width
         self.board_height = board_height
@@ -178,26 +198,36 @@ class TetrisPyGameRenderer(TetrisRenderer):
 class TetrisASCIIRenderer(TetrisRenderer):
     """ASCII-based console renderer for Tetris"""
 
-    def __init__(self, cell_width: int = 2):
+    def __init__(self, cell_width: int = 2, block: str = "█", empty: str = "."):
         self.cell_width = cell_width
+        self.block = block
+        self.empty = empty
+        self.border_left = "|"
+        self.border_right = "|"
+        self.border_bottom = "-"
+        self.left_corner = "+"
+        self.right_corner = "+"
+        self.print_top = True
 
     def render(self, state: Dict) -> None:
         """Render the current game state in ASCII"""
         self._clear_screen()
         grid = state["grid"]
 
+        blah = max(self.cell_width, len(self.block))
         # Print top border
-        print("+" + "-" * (state["width"] * self.cell_width) + "+")
+        if self.print_top:
+            print("+" + "-" * (state["width"] * blah) + "+")
 
         # Print grid with colored blocks
         for row in grid:
-            print("|", end="")
+            print(self.border_left, end="")
             for cell in row:
                 print(self._cell_str(cell), end="")
-            print("|")
+            print(self.border_right)
 
         # Print bottom border
-        print("+" + "-" * (state["width"] * self.cell_width) + "+")
+        print(self.left_corner + self.border_bottom * (state["width"] * blah) + self.right_corner)
 
         # Print game information
         print(f"\nScore: {state['score']}")
@@ -208,13 +238,18 @@ class TetrisASCIIRenderer(TetrisRenderer):
         print(f"Min height:    {state['metrics']['min_height']}")
         print(f"Max height:    {state['metrics']['max_height']}")
 
-    def _cell_str(self, cell: int, block: str = "█", empty: str = ".") -> str:
+    def _cell_str(
+        self,
+        cell: int,
+    ) -> str:
         """Convert a cell value to a colored string"""
+        cell_width = self.cell_width if len(self.block) < 2 else 1
         if cell == 0:
-            return empty * self.cell_width
+            return self.empty * cell_width
 
-        color = self.ASCII_COLORS[cell]
-        return f"{color}{block * self.cell_width}\033[0m"
+        color = self.ASCII_COLORS.get(cell, "")
+        end_color = "\033[0m" if color != "" else ""
+        return f"{color}{self.block * cell_width}{end_color}"
 
     def _clear_screen(self) -> None:
         """Clear the console screen"""
@@ -223,6 +258,20 @@ class TetrisASCIIRenderer(TetrisRenderer):
     def close(self) -> None:
         """Clean up resources (not needed for ASCII renderer)"""
         pass
+
+
+class TetrisASCIIRenderer2(TetrisASCIIRenderer):
+    def __init__(
+        self,
+    ):
+        super().__init__(cell_width=2, block="[]", empty=" .")
+        self.ASCII_COLORS = {}
+        self.border_left = "<!"
+        self.border_right = "!>"
+        self.border_bottom = "="
+        self.left_corner = "<!"
+        self.right_corner = "!>"
+        self.print_top = False
 
 
 import numpy as np

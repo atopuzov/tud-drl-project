@@ -14,7 +14,8 @@ from pathlib import Path
 
 import torch
 from stable_baselines3 import DQN
-from torchviz import make_dot
+
+# from torchviz import make_dot
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Game of Tetris")

@@ -13,16 +13,12 @@ from pathlib import Path
 
 import torch
 from stable_baselines3 import DQN
-from stable_baselines3.common.callbacks import (
-    BaseCallback,
-    CheckpointCallback,
-    EvalCallback,
-)
+from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback, EvalCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecEnv
 
-import tetrisenv  # noqa: F401  # pylint: disable=unused-import
 import customcnn
+import tetrisenv  # noqa: F401  # pylint: disable=unused-import
 
 
 class EpisodeEndMetricsCallback(BaseCallback):
@@ -94,8 +90,8 @@ def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
         None
     """
     policy_kwargs = {
-        "features_extractor_class": customcnn.TetrisFeatureExtractor1,
-        "net_arch": [128, 128],  # MLP architecture after feature extraction
+        "features_extractor_class": customcnn.TetrisFeatureExtractor2,
+        "net_arch": [128],  # MLP architecture after feature extraction
         "activation_fn": torch.nn.ReLU,
     }
 

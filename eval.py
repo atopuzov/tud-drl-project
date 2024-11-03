@@ -115,9 +115,9 @@ if __name__ == "__main__":
     episode_mean, episode_std = np.mean(lengths), np.std(lengths)
     print(
         f"Reward: {reward_mean} +/- {reward_std}, "
-        "ep. length: {episode_mean} +/- {episode_std} "
-        "score: {score_mean} +/- {score_std}, "
-        "lines: {lines_mean} +/- {lines_std}"
+        f"ep. length: {episode_mean} +/- {episode_std} "
+        f"score: {score_mean} +/- {score_std}, "
+        f"lines: {lines_mean} +/- {lines_std}"
     )
 
     env.close()

@@ -8,6 +8,7 @@ of this software.
 """
 
 import time
+from typing import Dict
 
 import gymnasium as gym
 import numpy as np
@@ -111,6 +112,35 @@ class BaseRewardTetrisEnv(gym.Env):
         """Render the current state of the game."""
         if self.renderer is not None:
             return self.renderer.render(self.state)
+
+
+class SimplestTetris(BaseRewardTetrisEnv):
+    """A very simple environment"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.observation_space = spaces.Dict(
+            {
+                "bumpiness": spaces.Box(0, self.grid_size[0] * self.grid_size[1], dtype=np.uint8),
+                "holes": spaces.Box(0, self.grid_size[0] * self.grid_size[1], dtype=np.uint8),
+                "min_height": spaces.Box(0, self.grid_size[0], dtype=np.uint8),
+                "max_height": spaces.Box(0, self.grid_size[0], dtype=np.uint8),
+                # "heights": spaces.Box(0, self.grid.size[0], shape=(self.grid_size[0] * self.grid_size[1], dtype=np.uint8))
+            }
+        )
+        self.bumpiness = 0
+        self.holes = 0
+        self.max_height = 0
+        self.min_height = 0
+
+    def _get_observation(self) -> Dict:
+        return {
+            "bumpiness": self.state["metrics"]["bumpiness"],
+            "holes": self.state["metrics"]["holes"],
+            "min_height": self.state["metrics"]["min_height"],
+            "max_height": self.state["metrics"]["max_height"],
+            # "heights": self.heights,
+        }
 
 
 class StandardRewardTetrisEnv(BaseRewardTetrisEnv):

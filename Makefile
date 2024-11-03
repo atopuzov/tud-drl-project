@@ -8,7 +8,7 @@ tensorboard:
 
 .PHONY: conda
 conda:
-	source /c/ProgramData/anaconda3/Scripts/activate tetris
+	@echo source /c/ProgramData/anaconda3/Scripts/activate tetris
 
 .PHONY: fmt
 fmt:
