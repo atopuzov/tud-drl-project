@@ -84,6 +84,7 @@ class BaseRewardTetrisEnv(gym.Env):
         return {
             "score": self.state["score"],
             "lines_cleared": self.state["lines_cleared"],
+            "pieces_placed": self.state["pieces_placed"],
             "current_ticks": self.state["current_ticks"],
             **self.state["metrics"],
         }

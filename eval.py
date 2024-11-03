@@ -42,13 +42,16 @@ class CustomMetricsCallback:
     def __init__(self):
         self.episode_scores = []
         self.episode_lines = []
+        self.episode_pieces = []
 
     def __call__(self, locals_: dict, globals_: dict) -> None:
         if locals_["done"]:
             score = locals_["info"].get("score", 0)
             lines = locals_["info"].get("lines_cleared", 0)
+            pieces = locals_["info"].get("pieces_placed", 0)
             self.episode_scores.append(score)
             self.episode_lines.append(lines)
+            self.episode_pieces.append(pieces)
 
     def get_results(self):
         """
@@ -60,12 +63,16 @@ class CustomMetricsCallback:
                 - score_std (float): The standard deviation of the episode scores.
                 - lines_mean (float): The mean of the episode lines.
                 - lines_std (float): The standard deviation of the episode lines.
+                - pieces_men (float): The mean of the episode pieces.
+                - pieces_std (float): The standard deviation of the episode pieces.
         """
         return (
             np.mean(self.episode_scores),
             np.std(self.episode_scores),
             np.mean(self.episode_lines),
             np.std(self.episode_lines),
+            np.mean(self.episode_pieces),
+            np.std(self.episode_pieces),
         )
 
 
@@ -110,14 +117,15 @@ if __name__ == "__main__":
         callback=callback,
         return_episode_rewards=True,
     )
-    score_mean, score_std, lines_mean, lines_std = callback.get_results()
+    score_mean, score_std, lines_mean, lines_std, pieces_mean, pieces_std = callback.get_results()
     reward_mean, reward_std = np.mean(rewards), np.std(rewards)
     episode_mean, episode_std = np.mean(lengths), np.std(lengths)
     print(
-        f"Reward: {reward_mean} +/- {reward_std}, "
-        f"ep. length: {episode_mean} +/- {episode_std} "
-        f"score: {score_mean} +/- {score_std}, "
-        f"lines: {lines_mean} +/- {lines_std}"
+        f"Reward: {reward_mean:.2f} +/- {reward_std:.2f}, "
+        f"ep. length: {episode_mean} +/- {episode_std:.2f} "
+        f"score: {score_mean:.2f} +/- {score_std:.2f}, "
+        f"lines: {lines_mean:.2f} +/- {lines_std:.2f}, "
+        f"pieces: {pieces_mean:.2f} +/- {pieces_std:.2f}"
     )
 
     env.close()
