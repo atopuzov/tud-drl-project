@@ -34,8 +34,8 @@ class EpisodeEndMetricsCallback(BaseCallback):
             bool: Always returns True so that the training process continues.
 
         The method checks if any environment is done (end of episode). If an episode
-        is done, it retrieves the score and lines cleared from the environment's info
-        and logs these metrics to TensorBoard.
+        is done, it retrieves the score, lines cleared and pieces placed  from the
+        environment's info and logs these metrics to TensorBoard.
         """
         # Check if any environment is done (end of episode)
         for i, done in enumerate(self.locals["dones"]):
@@ -43,9 +43,11 @@ class EpisodeEndMetricsCallback(BaseCallback):
                 info = self.locals["infos"][i]
                 score = info.get("score", 0)
                 lines_cleared = info.get("lines_cleared", 0)
+                pieces_placed = info.get("pieces_placed", 0)
                 # Log to TensorBoard at the end of the episode
                 self.logger.record("episode/score", score)
                 self.logger.record("episode/lines_cleared", lines_cleared)
+                self.logger.record("episode/pieces_placed", pieces_placed)
         return True
 
 
@@ -101,7 +103,6 @@ def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
         device = "mps"
     elif torch.cuda.is_available():
         device = "cuda"
-    # device = "cpu"
 
     model = DQN(
         "MlpPolicy",
@@ -211,9 +212,13 @@ def learn():
     vec_env_cls = SubprocVecEnv if args.subproc else DummyVecEnv
     env = make_vec_env(args.env_name, env_kwargs=env_kwargs, n_envs=args.num_envs, vec_env_cls=vec_env_cls)
 
-    if args.new:
+    new_learning = args.new or not args.model_file.exists()
+
+    if new_learning:
+        print("Starting new learning ...")
         start_learning(args, env)
     else:
+        print("Continuing learning ...")
         continue_learning(args, env)
 
 

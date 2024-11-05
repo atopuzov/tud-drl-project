@@ -27,6 +27,7 @@ class CustomMetricsCallback:
     Attributes:
         episode_scores (list): A list to store the scores of each episode.
         episode_lines (list): A list to store the number of lines cleared in each episode.
+        episode_pieces (list): A list to store the number of pieces placed in each episode.
     Methods:
         __call__(locals_, globals_):
             Called at the end of each episode to record the score and lines cleared.

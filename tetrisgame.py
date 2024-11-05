@@ -10,6 +10,7 @@ of this software.
 import time
 from collections import defaultdict
 from enum import IntEnum, unique
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -93,28 +94,36 @@ class TetrisGame:
         shape[shape == 1] = TETROMINOES_COLOR.get(tetromino, 1)
 
     # Naive rotations, some elements only have 2 rotations
-    TETROMINOES_ROT: defaultdict[str, dict[Rotation, np.ndarray]] = defaultdict(dict)
+    TETROMINOES_ROT: Dict[str, Dict[Rotation, np.ndarray]] = defaultdict(dict)
     for tetromino, shape in TETROMINOES.items():
-        for rotation in Rotation:
-            TETROMINOES_ROT[tetromino][rotation] = np.rot90(shape, rotation)
+        for _rotation in Rotation:
+            TETROMINOES_ROT[tetromino][_rotation] = np.rot90(shape, _rotation)
 
-    def __init__(self, grid_size=(20, 10), tetrominoes=None, rng=None, ticks_per_drop=1):
-        self.grid_size = grid_size
+    def __init__(
+        self,
+        grid_size: Tuple[int, int] = (20, 10),
+        tetrominoes: Optional[List[str]] = None,
+        rng: Optional[np.random.Generator] = None,
+        ticks_per_drop: int = 1,
+    ) -> None:
+        self.grid_size: Tuple[int, int] = grid_size
+        self.board_height: int
+        self.board_width: int
         self.board_height, self.board_width = grid_size
-        self.tetrominoes = tetrominoes or list(self.TETROMINOES.keys())
-        self.rng = rng if rng is not None else np.random.default_rng()
-        self.ticks_per_drop = ticks_per_drop
+        self.tetrominoes: List[str] = tetrominoes or list(self.TETROMINOES.keys())
+        self.rng: np.random.Generator = rng if rng is not None else np.random.default_rng()
+        self.ticks_per_drop: int = ticks_per_drop
 
         # Game state
-        self.grid = None
-        self.current_piece = None
-        self.current_piece_type = None
-        self.next_piece_type = None
-        self.tetromino_position = None
-        self.rotation = Rotation.R000
-        self.score = 0
-        self.lines_cleared = 0
-        self.current_ticks = 0
+        self.grid: Optional[np.ndarray] = None
+        self.current_piece: Optional[np.ndarray] = None
+        self.current_piece_type: Optional[str] = None
+        self.next_piece_type: Optional[str] = None
+        self.tetromino_position: Optional[Tuple[int, int]] = None
+        self.rotation: Rotation = Rotation.R000
+        self.score: int = 0
+        self.lines_cleared: int = 0
+        self.current_ticks: int = 0
 
         # Board analysis metrics
         self.bumpiness = 0
@@ -139,7 +148,7 @@ class TetrisGame:
         self.rotation = Rotation.R000
         return self.get_state()
 
-    def _reset_metrics(self):
+    def _reset_metrics(self) -> None:
         """Reset board analysis metrics."""
         self.bumpiness = 0
         self.holes = 0
@@ -148,7 +157,7 @@ class TetrisGame:
         self.max_height = 0
         self.sum_height = 0
 
-    def get_state(self):
+    def get_state(self) -> Dict[str, Any]:
         """Return current game state including grid and metrics."""
         return {
             "grid": self.get_grid(),
@@ -168,7 +177,7 @@ class TetrisGame:
             },
         }
 
-    def step(self, action):
+    def step(self, action: Actions):
         """Execute one step and return if piece was placed."""
         piece_placed = False
         game_over = False
@@ -214,9 +223,10 @@ class TetrisGame:
 
         return self.get_state(), game_over, drop_distance, lines_cleared  # piece_placed
 
-    def _get_next_tetromino(self):
+    def _get_next_tetromino(self) -> Optional[np.ndarray]:
         """Get the next tetromino piece."""
         self.current_piece_type = self.rng.choice(self.tetrominoes)
+        assert self.current_piece_type is not None, "self.current_piece_type should not be None"
         self.rotation = Rotation.R000
 
         tetromino_shape = self.TETROMINOES_ROT[self.current_piece_type][self.rotation]
@@ -227,8 +237,10 @@ class TetrisGame:
             return tetromino_shape
         return None
 
-    def _move_tetromino(self, dx=0, dy=0):
+    def _move_tetromino(self, dx: int = 0, dy: int = 0) -> bool:
         """Move the tetromino by the given delta. Returns True if successful."""
+        assert self.tetromino_position is not None, "self.tetromino_position should not be None"
+        assert self.current_piece is not None, "self.current_piece should not be None"
         new_position = (
             self.tetromino_position[0] + dy,
             self.tetromino_position[1] + dx,
@@ -238,23 +250,26 @@ class TetrisGame:
             return True
         return False
 
-    def _rotate_tetromino(self):
+    def _rotate_tetromino(self) -> None:
         """Rotate the current tetromino if possible."""
+        assert self.tetromino_position is not None, "self.tetromino_position should not be None"
+        assert self.current_piece_type is not None, "self.current_piece_type should not be None"
         new_rotation = next_rotation(self.rotation)
         new_piece = self.TETROMINOES_ROT[self.current_piece_type][new_rotation]
         if self._is_valid_position(self.tetromino_position, new_piece):
             self.rotation = new_rotation
             self.current_piece = new_piece
 
-    def _hard_drop(self):
+    def _hard_drop(self) -> int:
         """Drop the tetromino to the bottom. Returns the distance dropped."""
         drop_distance = 0
         while self._move_tetromino(dy=1):
             drop_distance += 1
         return drop_distance
 
-    def _is_valid_position(self, position, tetromino):
+    def _is_valid_position(self, position: Tuple[int, int], tetromino: np.ndarray) -> bool:
         """Check if the tetromino position is valid."""
+        assert self.grid is not None, "self.grid should not be None"
         y, x = position
         height, width = tetromino.shape
 
@@ -267,16 +282,20 @@ class TetrisGame:
                     return False
         return True
 
-    def _place_tetromino(self):
+    def _place_tetromino(self) -> None:
         """Place the current tetromino on the grid."""
+        assert self.tetromino_position is not None, "self.tetromino_position should not be None"
+        assert self.current_piece is not None, "self.current_piece should not be None"
+        assert self.grid is not None, "self.grid should not be None"
         y, x = self.tetromino_position
         for i, row in enumerate(self.current_piece):
             for j, cell in enumerate(row):
                 if cell:
                     self.grid[y + i, x + j] = cell
 
-    def _clear_lines(self):
+    def _clear_lines(self) -> int:
         """Clear completed lines and return number cleared."""
+        assert self.grid is not None, "self.grid should not be None"
         filled_rows = [y for y in range(self.grid_size[0]) if np.all(self.grid[y])]
         lines_cleared = len(filled_rows)
 
@@ -291,8 +310,10 @@ class TetrisGame:
 
         return lines_cleared
 
-    def get_grid(self):
+    def get_grid(self) -> np.ndarray:
         """Get the current grid state including active piece."""
+        assert self.tetromino_position is not None, "self.tetromino_position should not be None"
+        assert self.grid is not None, "self.grid should not be None"
         grid = self.grid.copy()
 
         if self.current_piece is not None:
@@ -303,7 +324,7 @@ class TetrisGame:
                         grid[y + i, x + j] = cell
         return grid
 
-    def _update_metrics(self):
+    def _update_metrics(self) -> None:
         """Update board analysis metrics."""
         (
             self.bumpiness,
@@ -314,13 +335,14 @@ class TetrisGame:
             self.sum_height,
         ) = self._analyze_board()
 
-    def _calculate_score(self, lines_cleared):
+    def _calculate_score(self, lines_cleared: int) -> int:
         """Calculate score based on lines cleared."""
         # 40 * (level + 1) 	100 * (level + 1) 	300 * (level + 1) 	1200 * (level + 1)
         return self.LINE_SCORE[lines_cleared]
 
-    def _analyze_board(self):
+    def _analyze_board(self) -> Tuple[int, int, np.ndarray, int, int, int]:
         """Analyze the current board state."""
+        assert self.grid is not None, "self.grid should not be None"
         column_heights = np.zeros(self.board_width, dtype=np.int32)
         min_height = self.board_height
         max_height = 0
@@ -357,14 +379,14 @@ class TetrisGame:
         return bumpiness, holes, column_heights, min_height, max_height, sum_height
 
 
-def ascii_render(observation):
+def ascii_render(observation) -> None:
     """Render the game state as text in the console."""
 
-    def clear_screen():
+    def clear_screen() -> None:
         """Clears the console screen."""
         print("\033[2J\033[H", end="")
 
-    TETROMINOES_ASCII_COLORS = {
+    TETROMINOES_ASCII_COLORS: Dict[int, str] = {
         1: "\033[36m",  # Cyan
         2: "\033[33m",  # Yellow
         3: "\033[35m",  # Purple
@@ -374,7 +396,7 @@ def ascii_render(observation):
         7: "\033[38;5;214m",  # Orange
     }
 
-    def cell_str(cell, wide=1, piece="█", space="."):
+    def cell_str(cell, wide: int = 1, piece: str = "█", space: str = "."):
         color = TETROMINOES_ASCII_COLORS.get(cell, "")
         end = "\033[0m"
         return f"{color}{piece*wide}{end}" if cell else space * wide
@@ -390,7 +412,7 @@ def ascii_render(observation):
     print("+" + "-" * board_width * wide + "+")
 
 
-def play_tetris():
+def play_tetris() -> None:
     """
     Play a game of Tetris.
 

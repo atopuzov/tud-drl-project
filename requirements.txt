@@ -24,4 +24,5 @@ pytest
 jupyterlab
 black[jupyter]
 isort
+mypy
 # torch-tb-profiler
