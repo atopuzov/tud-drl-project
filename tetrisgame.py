@@ -64,6 +64,101 @@ def next_rotation(rot: Rotation) -> Rotation:
     return Rotation.R000
 
 
+from abc import ABC, abstractmethod
+from typing import List
+
+from numpy.random import Generator
+
+
+class TetrominoGenerator(ABC):
+    """
+    Abstract base class for tetromino generators that defines the common interface
+    and shared initialization logic.
+    """
+
+    def __init__(self, tetrominoes: List[str], rng: Generator):
+        """
+        Initialize the generator with a list of tetrominoes and a random number generator.
+
+        Args:
+            tetrominoes: List of tetromino types
+            rng: NumPy random number generator
+        """
+        self.tetrominoes = tetrominoes
+        self.rng = rng
+        self.bag: List[str] = []
+
+    @abstractmethod
+    def get_next_tetromino(self) -> str:
+        """Get the next tetromino from the generator."""
+        pass
+
+    def reset(self, rng: Generator):
+        """Reset the generator"""
+        self.rng = rng
+
+
+class BagBasedGenerator(TetrominoGenerator):
+    """
+    Base class for generators that use a bag system to distribute tetrominoes.
+    """
+
+    def __init__(self, tetrominoes: List[str], rng: Generator, bag_multiplier: int = 1):
+        """
+        Initialize a bag-based generator.
+
+        Args:
+            tetrominoes: List of tetromino types
+            rng: NumPy random number generator
+            bag_multiplier: Number of copies of each tetromino in the bag
+        """
+        super().__init__(tetrominoes, rng)
+        self.bag_multiplier = bag_multiplier
+
+    def get_next_tetromino(self) -> str:
+        """
+        Get the next tetromino from the bag, refilling if empty.
+
+        Returns:
+            str: The next tetromino type
+        """
+        if not self.bag:
+            self.bag = list(self.tetrominoes) * self.bag_multiplier
+            self.rng.shuffle(self.bag)
+        return self.bag.pop()
+
+    def reset(self, rng: Generator):
+        super().reset(rng)
+        self.bag = []
+
+
+class TetrominoRandom7BagGenerator(BagBasedGenerator):
+    """Generator that uses a single set of tetrominoes in its bag."""
+
+    def __init__(self, tetrominoes: List[str], rng: Generator):
+        super().__init__(tetrominoes, rng, bag_multiplier=1)
+
+
+class TetrominoRandom14BagGenerator(BagBasedGenerator):
+    """Generator that uses two sets of tetrominoes in its bag."""
+
+    def __init__(self, tetrominoes: List[str], rng: Generator):
+        super().__init__(tetrominoes, rng, bag_multiplier=2)
+
+
+class TetrominoRandomGenerator(TetrominoGenerator):
+    """Generator that randomly selects tetrominoes without using a bag system."""
+
+    def get_next_tetromino(self) -> str:
+        """
+        Get a random tetromino.
+
+        Returns:
+            str: A randomly selected tetromino type
+        """
+        return self.rng.choice(self.tetrominoes)
+
+
 class TetrisGame:
     """Core Tetris game logic independent of any specific interface."""
 
@@ -112,6 +207,7 @@ class TetrisGame:
         self.board_height, self.board_width = grid_size
         self.tetrominoes: List[str] = tetrominoes or list(self.TETROMINOES.keys())
         self.rng: np.random.Generator = rng if rng is not None else np.random.default_rng()
+        self.piece_generator = TetrominoRandom14BagGenerator(rng=self.rng, tetrominoes=self.tetrominoes)
         self.ticks_per_drop: int = ticks_per_drop
 
         # Game state
@@ -138,6 +234,7 @@ class TetrisGame:
 
     def reset(self):
         """Reset the game state."""
+        self.piece_generator.reset(self.rng)
         self.grid = np.zeros(self.grid_size, dtype=self.grid_dtype)
         self.score = 0
         self.lines_cleared = 0
@@ -225,7 +322,8 @@ class TetrisGame:
 
     def _get_next_tetromino(self) -> Optional[np.ndarray]:
         """Get the next tetromino piece."""
-        self.current_piece_type = self.rng.choice(self.tetrominoes)
+        # self.current_piece_type = self.rng.choice(self.tetrominoes)
+        self.current_piece_type = self.piece_generator.get_next_tetromino()
         assert self.current_piece_type is not None, "self.current_piece_type should not be None"
         self.rotation = Rotation.R000
 

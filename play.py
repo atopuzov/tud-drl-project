@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 
 import gymnasium as gym
+import numpy as np
 from stable_baselines3 import DQN
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
@@ -29,16 +30,15 @@ if __name__ == "__main__":
     game_mode.add_argument("--pygame", action="store_true", help="Use pygame interface")
     game_mode.add_argument("--ascii", action="store_true", help="Use ascii interface")
     parser.add_argument("--env-name", type=str, default="Tetris-v3", help="Use SubprocVecEnv")
+    parser.add_argument("--random-seed", type=int, default=None, help="Use a random number seed")
     args = parser.parse_args()
-
-    render_mode = "pygame" if args.pygame else "ansi"
 
     tetrominoes = ["I", "O", "T", "L", "J"]
     genv = gym.make(
         args.env_name,
         grid_size=(20, 10),
         tetrominoes=tetrominoes,
-        render_mode=render_mode,
+        render_mode="pygame" if args.pygame else "ansi",
     )
     env = DummyVecEnv([lambda: Monitor(genv)])
 
@@ -57,13 +57,21 @@ if __name__ == "__main__":
             print(f"Unable to find {args.model_file}")
             sys.exit(-1)
 
+    env.seed(seed=args.random_seed)
     obs = env.reset()
     terminated = False
     try:
         while not terminated:
             env.render()  # Render the game state
             action, _states = model.predict(obs, deterministic=True)  # Predict the next action
-            obs, reward, terminated, information = model.env.step(action)  # Perform the next action
+            (
+                obs,
+                reward,
+                terminated,
+                information,
+            ) = env.step(
+                action
+            )  # Perform the next action
             time.sleep(args.delay)
     finally:
         # env.render()  # Render the game state

@@ -69,9 +69,7 @@ class BaseRewardTetrisEnv(gym.Env):
     def reset(self, seed=None, options=None) -> Tuple[np.ndarray | Dict, Dict]:
         """Reset the environment to start a new game."""
         super().reset(seed=seed)
-        if seed is not None:
-            self.game.rng = self.np_random
-
+        self.game.rng = self.np_random
         self.state = self.game.reset()
         return self._get_observation(), self._get_info()
 

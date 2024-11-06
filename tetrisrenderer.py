@@ -58,14 +58,15 @@ class TetrisPyGameRenderer(TetrisRenderer):
 
     def __init__(self, cell_size: int = 30, info_width: int = 200):
         import pygame
+
         self.cell_size = cell_size
         self.info_width = info_width
-        self.window : Optional[pygame.Surface]= None
-        self.font : Optional[pygame.font.Font]= None
-        self.info_font :Optional[pygame.font.Font]= None
-        self.grid_surface : Optional[pygame.Surface] = None
-        self.board_width : Optional[int] = None
-        self.board_height : Optional[int] = None
+        self.window: Optional[pygame.Surface] = None
+        self.font: Optional[pygame.font.Font] = None
+        self.info_font: Optional[pygame.font.Font] = None
+        self.grid_surface: Optional[pygame.Surface] = None
+        self.board_width: Optional[int] = None
+        self.board_height: Optional[int] = None
         self.music = Path("tetris.mp3")
 
     def initialize(self, board_width: int, board_height: int) -> None:
@@ -296,7 +297,7 @@ class TetrisRGBArrayRenderer(TetrisRenderer):
 
     def __init__(self, cell_size: int = 30):
         self.cell_size = cell_size
-        self.board_width : Optional[int]= None
+        self.board_width: Optional[int] = None
         self.board_height: Optional[int] = None
 
     def initialize(self, board_width: int, board_height: int) -> None:
@@ -441,9 +442,11 @@ if __name__ == "__main__":
     game_mode = parser.add_mutually_exclusive_group()
     game_mode.add_argument("--pygame", action="store_true", help="Use pygame interface")
     game_mode.add_argument("--ascii", action="store_true", help="Use ascii interface")
+    parser.add_argument("--random-seed", type=int, default=None, help="Use a random number seed")
     args = parser.parse_args()
 
-    game = TetrisGame(ticks_per_drop=args.ticks)
+    rng = np.random.default_rng(args.random_seed)
+    game = TetrisGame(ticks_per_drop=args.ticks, rng=rng)
     if args.pygame:
         play_tetris_pygame(game)  # Use PyGame renderer
     elif args.ascii:
