@@ -57,14 +57,15 @@ class TetrisPyGameRenderer(TetrisRenderer):
     """PyGame-based renderer for Tetris"""
 
     def __init__(self, cell_size: int = 30, info_width: int = 200):
+        import pygame
         self.cell_size = cell_size
         self.info_width = info_width
-        self.window = None
-        self.font = None
-        self.info_font = None
-        self.grid_surface = None
-        self.board_width = None
-        self.board_height = None
+        self.window : Optional[pygame.Surface]= None
+        self.font : Optional[pygame.font.Font]= None
+        self.info_font :Optional[pygame.font.Font]= None
+        self.grid_surface : Optional[pygame.Surface] = None
+        self.board_width : Optional[int] = None
+        self.board_height : Optional[int] = None
         self.music = Path("tetris.mp3")
 
     def initialize(self, board_width: int, board_height: int) -> None:
@@ -101,10 +102,14 @@ class TetrisPyGameRenderer(TetrisRenderer):
         pygame.event.pump()  # Stop the window from freezing
 
         # Clear surfaces
+        assert self.window is not None, "self.window should not be None"
+        assert self.grid_surface is not None, "self.grid_surface should not be None"
         self.window.fill((128, 128, 128))  # Gray background
         self.grid_surface.fill((0, 0, 0))  # Black grid background
 
         # Draw grid
+        assert self.board_height is not None, "self.board_height should not be None"
+        assert self.board_width is not None, "self.board_width should not be None"
         grid = state["grid"]
         for y in range(self.board_height):
             for x in range(self.board_width):
@@ -137,6 +142,8 @@ class TetrisPyGameRenderer(TetrisRenderer):
 
     def _draw_cell(self, x: int, y: int, cell_value: int) -> None:
         """Draw a single cell"""
+        assert self.grid_surface is not None, "self.grid_surface should not be None"
+
         import pygame
 
         rect = pygame.Rect(
@@ -149,10 +156,15 @@ class TetrisPyGameRenderer(TetrisRenderer):
 
     def _draw_info(self, state: Dict) -> None:
         """Draw game information panel"""
+        assert self.board_width is not None, "self.board_width should not be None"
         info_x = self.board_width * self.cell_size + 10
         info_y = 10
         line_height = 30
         lines = 1
+
+        assert self.font is not None, "self.font should not be None"
+        assert self.info_font is not None, "self.info_font should not be None"
+        assert self.window is not None, "self.window should not be None"
 
         # Draw score
         score_text = self.font.render(f"Score: {state['score']}", True, (255, 255, 255))
@@ -284,8 +296,8 @@ class TetrisRGBArrayRenderer(TetrisRenderer):
 
     def __init__(self, cell_size: int = 30):
         self.cell_size = cell_size
-        self.board_width = None
-        self.board_height = None
+        self.board_width : Optional[int]= None
+        self.board_height: Optional[int] = None
 
     def initialize(self, board_width: int, board_height: int) -> None:
         """Initialize board dimensions."""
@@ -297,6 +309,8 @@ class TetrisRGBArrayRenderer(TetrisRenderer):
         if self.board_width is None or self.board_height is None:
             self.initialize(state["width"], state["height"])
 
+        assert self.board_height is not None, "self.board_height should not be None"
+        assert self.board_width is not None, "self.board_width should not be None"
         # Initialize the RGB array with black background
         image_height = self.board_height * self.cell_size
         image_width = self.board_width * self.cell_size
@@ -326,6 +340,8 @@ class TetrisRGBArrayRenderer(TetrisRenderer):
 
     def _draw_grid_lines(self, rgb_array: np.ndarray) -> None:
         """Draw grid lines on the RGB array."""
+        assert self.board_height is not None, "self.board_height should not be None"
+        assert self.board_width is not None, "self.board_width should not be None"
         # Draw vertical lines
         for x in range(1, self.board_width):
             x_pos = x * self.cell_size

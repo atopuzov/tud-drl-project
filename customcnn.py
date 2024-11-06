@@ -259,7 +259,7 @@ class TetrisFeatureExtractor5(BaseFeaturesExtractor):
         return self.linear(board_features)
 
 
-class TetrisFeatureExtractor5(BaseFeaturesExtractor):
+class TetrisFeatureExtractor6(BaseFeaturesExtractor):
     def __init__(self, observation_space: spaces.Box, features_dim: int = 128):
         super().__init__(observation_space, features_dim)
         n_chan = observation_space.shape[0]
