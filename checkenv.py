@@ -13,6 +13,16 @@ from stable_baselines3.common.env_checker import check_env
 import tetrisenv
 
 if __name__ == "__main__":
-    for env_name in ("Tetris-v0", "Tetris-v1", "Tetris-v2", "Tetris-v3"):
-        print("Checking the {env_name} env ...")
+    for env_name in (
+        "Tetris-base",
+        "Tetris-score",
+        "Tetris-simpleheuristic",
+        "Tetris-heuristic1",
+        "Tetris-heuristic2",
+        "Tetris-heuristic3",
+        "Tetris-v2",
+        "Tetris-imgh",
+        "Tetris-v3",
+    ):
+        print(f"Checking the {env_name} env ...")
         base_env = gym.make(env_name)

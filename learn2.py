@@ -195,9 +195,9 @@ def learn():
         help="Model file name prefix for checkpointing",
     )
     # TODO:
-    parser.add_argument("--num-envs", type=int, default=4, help="Number of environments")
+    parser.add_argument("--num-envs", type=int, default=1, help="Number of environments")
     parser.add_argument("--subproc", action="store_true", help="Use SubprocVecEnv")
-    parser.add_argument("--env-name", type=str, default="Tetris-v3", help="Environment name")
+    parser.add_argument("--env-name", type=str, default="Tetris-imgh", help="Environment name")
     parser.add_argument("--random-seed", type=int, default=None, help="Use a random number seed")
     args = parser.parse_args()
 

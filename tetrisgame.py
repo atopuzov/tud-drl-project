@@ -232,7 +232,7 @@ class TetrisGame:
 
         self.reset()
 
-    def reset(self):
+    def reset(self) -> Dict[str, Any]:
         """Reset the game state."""
         self.piece_generator.reset(self.rng)
         self.grid = np.zeros(self.grid_size, dtype=self.grid_dtype)

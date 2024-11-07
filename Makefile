@@ -17,7 +17,7 @@ fmt:
 
 .PHONY: clean
 clean:
-	rm -rf models/ best_model/ logs/
+	rm -rf models/ best_model/ logs/ tetris_model.zip
 
 .PHONY: pyenv-remove
 pyenv-remove:

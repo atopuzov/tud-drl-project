@@ -21,16 +21,23 @@ env_kwargs = {
     "grid_size": (20, 10),
     "tetrominoes": None,
     "render_mode": None,
-    "ticks_per_drop": 1,
+    # "ticks_per_drop": 1,
 }
-gym.register("Tetris-v0", entry_point="tetrisenv:StandardRewardTetrisEnv", kwargs=env_kwargs)
-gym.register("Tetris-v1", entry_point="tetrisenv:StandardReward2TetrisEnv", kwargs=env_kwargs)
+gym.register("Tetris-base", entry_point="tetrisenv:BaseRewardTetrisEnv", kwargs=env_kwargs)
+gym.register("Tetris-score", entry_point="tetrisenv:ScoreRewardTetrisEnv", kwargs=env_kwargs)
+gym.register("Tetris-simpleheuristic", entry_point="tetrisenv:SimpleHeuristicTetris", kwargs=env_kwargs)
+
+gym.register("Tetris-heuristic1", entry_point="tetrisenv:HeuristicRewardTetrisEnv", kwargs=env_kwargs)
+gym.register("Tetris-heuristic2", entry_point="tetrisenv:HeuristicReward2TetrisEnv", kwargs=env_kwargs)
+gym.register("Tetris-heuristic3", entry_point="tetrisenv:HeuristicReward3TetrisEnv", kwargs=env_kwargs)
+
 gym.register("Tetris-v2", entry_point="tetrisenv:MyTetrisEnv", kwargs=env_kwargs)
+gym.register("Tetris-imgh", entry_point="tetrisenv:ImgHTetrisEnv", kwargs=env_kwargs)
 gym.register("Tetris-v3", entry_point="tetrisenv:MyTetrisEnv2", kwargs=env_kwargs)
 
 
-class BaseRewardTetrisEnv(gym.Env):
-    """Base Tetris environment with minimal reward structure."""
+class BaseTetrisEnv(gym.Env):
+    """Base Tetris Gym Environment"""
 
     metadata = {
         "render_modes": ["pygame", "ansi", "rgb_array", "human"],
@@ -52,12 +59,6 @@ class BaseRewardTetrisEnv(gym.Env):
             rng=self.np_random,
         )
 
-        self.action_space = spaces.Discrete(len(Actions))
-        # self.observation_space = spaces.Box(
-        #     low=0, high=1, shape=grid_size, dtype=np.int32
-        # )
-        self.observation_space = spaces.Box(low=0, high=1, shape=(grid_size[0] * grid_size[1],), dtype=np.int32)
-
         self.renderer: Optional[TetrisRenderer] = None
         if self.render_mode in {"pygame", "human"}:
             self.renderer = TetrisPyGameRenderer()
@@ -66,12 +67,24 @@ class BaseRewardTetrisEnv(gym.Env):
         elif self.render_mode == "rgb_array":
             self.renderer = TetrisRGBArrayRenderer()
 
+        self.action_space = spaces.Discrete(len(Actions))
+
     def reset(self, seed=None, options=None) -> Tuple[np.ndarray | Dict, Dict]:
         """Reset the environment to start a new game."""
         super().reset(seed=seed)
         self.game.rng = self.np_random
-        self.state = self.game.reset()
+        self.state = self.game.reset()  # todo pass random
         return self._get_observation(), self._get_info()
+
+    def step(self, action: int):
+        self.state, game_over, drop_distance, lines_cleared = self.game.step(Actions(action))
+        reward = self.calculate_reward(game_over, drop_distance, lines_cleared)
+
+        observation = self._get_observation()
+        info = self._get_info()
+
+        # observation, reward, terminated, truncated, info
+        return observation, reward, game_over, False, info
 
     def _get_info(self) -> Dict[str, Any]:
         assert self.state is not None, "self.state should not be None"
@@ -83,6 +96,29 @@ class BaseRewardTetrisEnv(gym.Env):
             **self.state["metrics"],
         }
 
+    def render(self):
+        """Render the current state of the game."""
+        assert self.state is not None, "self.state should not be None"
+        if self.renderer is not None:
+            return self.renderer.render(self.state)
+
+    def _get_observation(self):
+        pass
+
+    def calculate_reward(self, game_over, drop_distance, lines_cleared):
+        pass
+
+
+class BaseRewardTetrisEnv(BaseTetrisEnv):
+    """Base Tetris environment with minimal reward structure."""
+
+    GAME_OVER_PENALTY = -100
+
+    def __init__(self, grid_size=(20, 10), tetrominoes: Optional[List[str]] = None, render_mode=None):
+        super().__init__(grid_size=grid_size, tetrominoes=tetrominoes, render_mode=render_mode)
+        # self.observation_space = spaces.Box(low=0, high=1, shape=grid_size, dtype=np.int32)
+        self.observation_space = spaces.Box(low=0, high=1, shape=(grid_size[0] * grid_size[1],), dtype=np.int32)
+
     def _get_observation(self) -> np.ndarray | Dict:
         """Return the current state of the game grid."""
         assert self.state is not None, "self.state should not be None"
@@ -90,28 +126,43 @@ class BaseRewardTetrisEnv(gym.Env):
         grid[grid > 0] = 1
         return grid.flatten()
 
-    def step(self, action):
-        self.state, game_over, drop_distance, lines_cleared = self.game.step(action)
-        reward = self.calculate_reward(game_over, drop_distance, lines_cleared)
-
-        observation = self._get_observation()
-        info = self._get_info()
-
-        # observation, reward, terminated, truncated, info
-        return observation, reward, game_over, False, info
-
-    def calculate_reward(self, game_over, drop_distance, lines_cleared):
+    def calculate_reward(self, game_over, drop_distance, lines_cleared) -> int:
         """Base reward function to be overridden by subclasses."""
-        return 1 if not game_over else -100
-
-    def render(self):
-        """Render the current state of the game."""
-        if self.renderer is not None:
-            return self.renderer.render(self.state)
+        return 1 if not game_over else self.GAME_OVER_PENALTY
 
 
-class SimplestTetris(BaseRewardTetrisEnv):
-    """A very simple environment"""
+class ScoreRewardTetrisEnv(BaseRewardTetrisEnv):
+    GAME_OVER_PENALTY = -100
+
+    def __init__(self, grid_size=(20, 10), tetrominoes: Optional[List[str]] = None, render_mode=None):
+        super().__init__(grid_size=grid_size, tetrominoes=tetrominoes, render_mode=render_mode)
+        self.score = 0
+
+    def reset(self, seed=None):
+        self.score = 0
+        return super().reset(seed=seed)
+
+    def calculate_reward(self, game_over, drop_distance, lines_cleared) -> int:
+        """Just uses score and game over"""
+        assert self.state is not None, "self.state should not be None"
+        reward = 0
+        score = self.state.get("score", 0)
+        reward += score - self.score
+        self.score = score
+        if game_over:
+            reward += self.GAME_OVER_PENALTY
+
+        return reward
+
+
+class SimpleHeuristicTetris(BaseTetrisEnv):
+    """A very simple environment using board features"""
+
+    GAME_OVER_PENALTY = -100
+    HEIGHT_PENALTY = -0.51
+    LINE_REWARD = 0.76
+    HOLE_PENALTY = -0.36
+    BUMPINESS_PENALTY = -0.18
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -124,10 +175,14 @@ class SimplestTetris(BaseRewardTetrisEnv):
                 # "heights": spaces.Box(0, self.grid.size[0], shape=(self.grid_size[0] * self.grid_size[1], dtype=np.uint8))
             }
         )
-        self.bumpiness = 0
-        self.holes = 0
-        self.max_height = 0
-        self.min_height = 0
+        self.fitness = 0
+        self.score = 0
+
+    def reset(self, *args, **kwargs):
+        """Reset the environment to start a new game."""
+        self.fitness = 0
+        self.score = 0
+        return super().reset(*args, **kwargs)
 
     def _get_observation(self) -> Dict:
         assert self.state is not None, "self.state should not be None"
@@ -139,8 +194,30 @@ class SimplestTetris(BaseRewardTetrisEnv):
             # "heights": self.heights,
         }
 
+    def calculate_reward(self, game_over, drop_distance, lines_cleared) -> int:
+        assert self.state is not None, "self.state should not be None"
+        reward = 0
+        holes = self.state["metrics"]["holes"]
+        bumpiness = self.state["metrics"]["bumpiness"]
+        height = self.state["metrics"]["sum_height"]
 
-class StandardRewardTetrisEnv(BaseRewardTetrisEnv):
+        new_fitness = (
+            self.HEIGHT_PENALTY * height
+            + self.LINE_REWARD * lines_cleared
+            + self.HOLE_PENALTY * holes
+            + self.BUMPINESS_PENALTY * bumpiness
+        )
+        change_in_fitness = new_fitness - self.fitness
+        self.fitness = new_fitness
+
+        reward += change_in_fitness
+
+        if game_over:
+            reward += self.GAME_OVER_PENALTY
+        return reward
+
+
+class HeuristicRewardTetrisEnv(BaseRewardTetrisEnv):
     """Tetris environment with standard scoring-based rewards."""
 
     GAME_OVER_PENALTY = -100
@@ -149,15 +226,16 @@ class StandardRewardTetrisEnv(BaseRewardTetrisEnv):
     HOLE_PENALTY = -0.36
     BUMPINESS_PENALTY = -0.18
 
-    # -0.51 × Height
-    # 0.76 × Lines
-    # -0.36 × Holes
-    # -0.18 × Bumpiness
-
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        use_score=False,
+        *args,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.fitness = 0
         self.score = 0
+        self.use_score = use_score
 
     def reset(self, *args, **kwargs):
         """Reset the environment to start a new game."""
@@ -172,15 +250,21 @@ class StandardRewardTetrisEnv(BaseRewardTetrisEnv):
         bumpiness = self.state["metrics"]["bumpiness"]
         height = self.state["metrics"]["sum_height"]
 
-        new_fitness = -0.51 * height + 0.76 * lines_cleared - 0.36 * holes - 0.18 * bumpiness
+        new_fitness = (
+            self.HEIGHT_PENALTY * height
+            + self.LINE_REWARD * lines_cleared
+            + self.HOLE_PENALTY * holes
+            + self.BUMPINESS_PENALTY * bumpiness
+        )
         change_in_fitness = new_fitness - self.fitness
         self.fitness = new_fitness
         reward += change_in_fitness
 
-        # score = self.state["score"]
-        # change_in_score = score - self.score
-        # self.score = score
-        # reward += change_in_score
+        if self.use_score:
+            score = self.state["score"]
+            delta_score = score - self.score
+            self.score = score
+            reward += delta_score
 
         if game_over:
             reward += self.GAME_OVER_PENALTY
@@ -188,7 +272,12 @@ class StandardRewardTetrisEnv(BaseRewardTetrisEnv):
         return reward
 
 
-class StandardReward2TetrisEnv(StandardRewardTetrisEnv):
+class HeuristicReward2TetrisEnv(HeuristicRewardTetrisEnv):
+    def __init__(self, *args, **kwargs):
+        super().__init__(use_score=True, *args, **kwargs)
+
+
+class HeuristicReward3TetrisEnv(HeuristicRewardTetrisEnv):
     """Tetris environment with standard scoring-based rewards but more for lines"""
 
     LINES_REWARDS = [0, 100, 250, 400, 550]
@@ -258,7 +347,86 @@ class MyTetrisEnv(BaseRewardTetrisEnv):
         return reward
 
 
-class MyTetrisEnv2(BaseRewardTetrisEnv):
+class ImageTetrisBaseEnv(BaseTetrisEnv):
+    """Tetris environment with image observation"""
+
+    def __init__(self, grid_size=(20, 10), tetrominoes: Optional[List[str]] = None, render_mode=None):
+        super().__init__(grid_size=grid_size, tetrominoes=tetrominoes, render_mode=render_mode)
+        # The minimal resolution for an image is 36x36 for the default `CnnPolicy`.
+        # You might need to use a custom features extractor cf.
+        # FIX: np.kron(array, np.ones(2,2)) -> scale 2x
+        self.observation_space = spaces.Box(
+            low=0,
+            high=255,
+            shape=(1, self.grid_size[0], self.grid_size[1]),
+            dtype=np.uint8,
+        )
+
+    def _get_observation(self) -> np.ndarray:
+        """Return the current state of the game grid."""
+        assert self.state is not None, "self.state should not be None"
+        grid = self.state["grid"].copy()
+        np.putmask(grid, grid > 0, 255)
+        # axis=0 channel first
+        # axis=1 channel last
+        return np.expand_dims(grid, axis=0).astype(np.uint8)
+
+
+class ImgHTetrisEnv(ImageTetrisBaseEnv):
+    """Image observation and heuristic award"""
+
+    GAME_OVER_PENALTY = -100
+    HEIGHT_PENALTY = -0.51
+    LINE_REWARD = 0.76
+    HOLE_PENALTY = -0.36
+    BUMPINESS_PENALTY = -0.18
+
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.fitness = 0
+        self.score = 0
+        self.use_score = False
+
+    def reset(self, *args, **kwargs):
+        """Reset the environment to start a new game."""
+        self.fitness = 0
+        self.score = 0
+        return super().reset(*args, **kwargs)
+
+    def calculate_reward(self, game_over, drop_distance, lines_cleared):
+        """Custom reward function."""
+        reward = 0
+        holes = self.state["metrics"]["holes"]
+        bumpiness = self.state["metrics"]["bumpiness"]
+        height = self.state["metrics"]["sum_height"]
+
+        new_fitness = (
+            self.HEIGHT_PENALTY * height
+            + self.LINE_REWARD * lines_cleared
+            + self.HOLE_PENALTY * holes
+            + self.BUMPINESS_PENALTY * bumpiness
+        )
+        change_in_fitness = new_fitness - self.fitness
+        self.fitness = new_fitness
+        reward += change_in_fitness
+
+        if self.use_score:
+            score = self.state["score"]
+            delta_score = score - self.score
+            self.score = score
+            reward += delta_score
+
+        if game_over:
+            reward += self.GAME_OVER_PENALTY
+
+        return reward
+
+
+class MyTetrisEnv2(ImageTetrisBaseEnv):
     """Tetris environment with custom rewards and RGB array observations."""
 
     GAME_OVER_REWARD = -100
@@ -270,15 +438,6 @@ class MyTetrisEnv2(BaseRewardTetrisEnv):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        # The minimal resolution for an image is 36x36 for the default `CnnPolicy`.
-        # You might need to use a custom features extractor cf.
-        # FIX: np.kron(array, np.ones(2,2)) -> scale 2x
-        self.observation_space = spaces.Box(
-            low=0,
-            high=255,
-            shape=(1, self.grid_size[0], self.grid_size[1]),
-            dtype=np.uint8,
-        )
         self.bumpiness: int = 0
         self.holes: int = 0
         self.max_height: int = 0
@@ -289,15 +448,6 @@ class MyTetrisEnv2(BaseRewardTetrisEnv):
         self.holes = 0
         self.max_height = 0
         return super().reset(*args, **kwargs)
-
-    def _get_observation(self) -> np.ndarray:
-        """Return the current state of the game grid."""
-        assert self.state is not None, "self.state should not be None"
-        grid = self.state["grid"].copy()
-        np.putmask(grid, grid > 0, 255)
-        # axis=0 channel first
-        # axis=1 channel last
-        return np.expand_dims(grid, axis=0).astype(np.uint8)
 
     def calculate_reward(self, game_over, drop_distance, lines_cleared):
         """Custom reward function."""
@@ -339,7 +489,7 @@ def clear_screen():
 # Example usage
 def play_tetris():
     """Main function to run the Tetris environment."""
-    env = StandardRewardTetrisEnv(render_mode="ansi")  # Initialize the Tetris environment
+    env = BaseRewardTetrisEnv(render_mode="ansi")  # Initialize the Tetris environment
     _observation, _info = env.reset()  # Reset the environment to start a new game
 
     terminated = False
