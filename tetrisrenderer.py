@@ -14,6 +14,14 @@ import numpy as np
 
 from tetrisgame import Actions, TetrisGame
 
+try:
+    import pygame
+    from pygame import mixer
+
+    PYGAME_AVAILABLE = True
+except ModuleNotFoundError:
+    PYGAME_AVAILABLE = False
+
 
 class TetrisRenderer:
     """Base class for Tetris renderers"""
@@ -57,7 +65,8 @@ class TetrisPyGameRenderer(TetrisRenderer):
     """PyGame-based renderer for Tetris"""
 
     def __init__(self, cell_size: int = 30, info_width: int = 200):
-        import pygame
+        if not PYGAME_AVAILABLE:
+            raise ModuleNotFoundError("pygame not available")
 
         self.cell_size = cell_size
         self.info_width = info_width
@@ -71,9 +80,6 @@ class TetrisPyGameRenderer(TetrisRenderer):
 
     def initialize(self, board_width: int, board_height: int) -> None:
         """Initialize PyGame window and surfaces"""
-        import pygame
-        from pygame import mixer
-
         pygame.init()
         mixer.init()
         pygame.display.set_caption("Tetris")
@@ -95,8 +101,6 @@ class TetrisPyGameRenderer(TetrisRenderer):
 
     def render(self, state: Dict) -> None:
         """Render the current game state"""
-        import pygame
-
         if not self.window:
             self.initialize(state["width"], state["height"])
 
@@ -144,8 +148,6 @@ class TetrisPyGameRenderer(TetrisRenderer):
     def _draw_cell(self, x: int, y: int, cell_value: int) -> None:
         """Draw a single cell"""
         assert self.grid_surface is not None, "self.grid_surface should not be None"
-
-        import pygame
 
         rect = pygame.Rect(
             x * self.cell_size + 1,
@@ -203,8 +205,6 @@ class TetrisPyGameRenderer(TetrisRenderer):
 
     def close(self) -> None:
         """Clean up PyGame resources"""
-        import pygame
-
         pygame.quit()
 
 
@@ -287,9 +287,6 @@ class TetrisASCIIRenderer2(TetrisASCIIRenderer):
         self.print_top = False
 
 
-import numpy as np
-
-
 class TetrisRGBArrayRenderer(TetrisRenderer):
     """RGB array renderer for Tetris with grid lines."""
 
@@ -360,8 +357,6 @@ class TetrisRGBArrayRenderer(TetrisRenderer):
 
 def play_tetris_pygame(game) -> None:
     """Play Tetris with PyGame interface"""
-    import pygame
-
     pygame.init()
     renderer = TetrisPyGameRenderer()
     terminated = False
@@ -369,9 +364,12 @@ def play_tetris_pygame(game) -> None:
 
     try:
         observation = game.reset()
+        tick = 0
         while not terminated:
+            tick += 1
             # Handle PyGame events
             for event in pygame.event.get():
+                action = None
                 if event.type == pygame.QUIT or (
                     event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_q)
                 ):
@@ -385,13 +383,14 @@ def play_tetris_pygame(game) -> None:
                         action = Actions.ROTATE
                     elif event.key == pygame.K_SPACE:
                         action = Actions.HARD_DROP
-                    else:
-                        continue
+                    elif event.key == pygame.K_m:
+                        mixer.music.stop()
                     if action is not None:
                         observation, terminated, _, _ = game.step(action)
 
             # TODO: Natural drop based on ticks
-            # observation, terminated, _, _ = game.step(None)
+            # if tick % 10 == 0:
+            #     observation, terminated, _, _ = game.step(None)
 
             # Render and control game speed
             renderer.render(observation)
