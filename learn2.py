@@ -92,8 +92,8 @@ def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
         None
     """
     policy_kwargs = {
-        "features_extractor_class": customcnn.TetrisFeatureExtractor2,
-        "net_arch": [128],  # MLP architecture after feature extraction
+        "features_extractor_class": customcnn.TFEAtari,
+        "net_arch": [256],  # MLP architecture after feature extraction
         "activation_fn": torch.nn.ReLU,
     }
 
@@ -108,16 +108,16 @@ def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
         "MlpPolicy",
         env,
         policy_kwargs=policy_kwargs,
-        learning_rate=1e-4,
+        learning_rate=5e-5,
         gamma=0.99,
-        batch_size=128,
-        learning_starts=10000,
-        buffer_size=100000,
-        target_update_interval=1000,
-        exploration_fraction=0.2,
+        batch_size=64, 
+        learning_starts=50000,
+        buffer_size=500000,
+        target_update_interval=2000,
+        exploration_fraction=0.3,
         exploration_initial_eps=1.0,
         # exploration_final_eps=0.01,
-        exploration_final_eps=0.05,
+        exploration_final_eps=0.01,
         # exploration_final_eps=0.1, # try with 0.05/0.1
         verbose=1,
         tensorboard_log=LOG_PATH,
