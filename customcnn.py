@@ -13,6 +13,66 @@ from gymnasium import spaces
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 
+class TFEAtari(BaseFeaturesExtractor):
+    """
+    A feature extractor for Tetris game observations using a Convolutional Neural Network (CNN) based on Playing Atari Gamse.
+    Original CNN is (for images size 84x84x4):
+    conv1: 16 8x8, stride 4, relu
+    conv2: 32 4x4, stride 2, relu
+    fc: 256, relu
+    Adjusted for (20x10x1):
+    conv1: 16 3x3, stride 1, relu
+    conv2: 32 3x3, stride 1, relu
+    fc: 256, relu
+
+    Args:
+        observation_space (spaces.Box): The observation space of the environment.
+
+    Attributes:
+        cnn (nn.Sequential): The convolutional neural network consisting of a Conv2D layer, ReLU activation, and Flatten layer.
+        linear (nn.Sequential): A linear layer followed by ReLU activation to produce the final feature vector.
+
+    Methods:
+        forward(observations: torch.Tensor) -> torch.Tensor:
+            Processes the input observations through the CNN and linear layers to extract features.
+    """
+
+    def __init__(self, observation_space: spaces.Box, features_dim: int = 256):
+        super().__init__(observation_space, features_dim)
+        n_chan = observation_space.shape[0]
+
+        self.cnn = nn.Sequential(
+            nn.Conv2d(
+                in_channels=n_chan,
+                out_channels=16,
+                kernel_size=3,  # Reduced from 8x8 due to smaller input
+                stride=1,       # Reduced from 4 to preserve spatial dimensions
+                padding=1       # Add padding to maintain spatial dimensions
+            ), # After conv1: 20x10x16
+            nn.ReLU(),
+            nn.Conv2d(
+                in_channels=16,
+                out_channels=32,
+                kernel_size=3,  # Reduced from 4x4
+                stride=1,
+                padding=1            
+            ), # After conv2: 20x10x32
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        with torch.no_grad():  # Don't track operations, we just need to calculate the output size
+            # example_input = torch.zeros(1, n_chan, board_height, board_width)
+            example_input = torch.as_tensor(observation_space.sample()[None]).float()
+            cnn_output_dim = self.cnn(example_input).shape[1]
+
+        self.linear = nn.Sequential(nn.Linear(cnn_output_dim, features_dim), nn.ReLU())
+
+    def forward(self, observations) -> torch.Tensor:
+        """Process board through CNN and linear"""
+        board_features = self.cnn(observations)
+        return self.linear(board_features)
+
 class TetrisFeatureExtractor(BaseFeaturesExtractor):
     """
     A feature extractor for Tetris game observations using a Convolutional Neural Network (CNN).
@@ -33,7 +93,7 @@ class TetrisFeatureExtractor(BaseFeaturesExtractor):
     """
 
     def __init__(
-        self, observation_space: spaces.Box, features_dim: int = 128, num_kernels: int = 16, kernel_size: int = 3
+        self, observation_space: spaces.Box, features_dim: int = 128, num_kernels: int = 32, kernel_size: int = 3
     ):
         super().__init__(observation_space, features_dim)
         n_chan = observation_space.shape[0]

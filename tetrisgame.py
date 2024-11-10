@@ -207,7 +207,7 @@ class TetrisGame:
         self.board_height, self.board_width = grid_size
         self.tetrominoes: List[str] = tetrominoes or list(self.TETROMINOES.keys())
         self.rng: np.random.Generator = rng if rng is not None else np.random.default_rng()
-        self.piece_generator = TetrominoRandom14BagGenerator(rng=self.rng, tetrominoes=self.tetrominoes)
+        self.piece_generator = TetrominoRandom7BagGenerator(rng=self.rng, tetrominoes=self.tetrominoes)
         self.ticks_per_drop: int = ticks_per_drop
 
         # Game state

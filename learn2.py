@@ -207,11 +207,12 @@ def learn():
     env_kwargs = {
         "grid_size": (20, 10),
         "tetrominoes": tetrominoes,
-        "render_mode": "human",
+        "render_mode": "ansi",
     }
 
     vec_env_cls = SubprocVecEnv if args.subproc else DummyVecEnv
     env = make_vec_env(args.env_name, env_kwargs=env_kwargs, n_envs=args.num_envs, vec_env_cls=vec_env_cls)
+    print(f"Created {args.num_envs} {args.env_name} environments.")
 
     new_learning = args.new or not args.model_file.exists()
 

@@ -375,7 +375,7 @@ class ImageTetrisBaseEnv(BaseTetrisEnv):
 class ImgHTetrisEnv(ImageTetrisBaseEnv):
     """Image observation and heuristic award"""
 
-    GAME_OVER_PENALTY = -100
+    GAME_OVER_PENALTY = -50
     HEIGHT_PENALTY = -0.51
     LINE_REWARD = 0.76
     HOLE_PENALTY = -0.36
@@ -399,6 +399,8 @@ class ImgHTetrisEnv(ImageTetrisBaseEnv):
 
     def calculate_reward(self, game_over, drop_distance, lines_cleared):
         """Custom reward function."""
+        assert self.state is not None, "self.state should not be None"
+
         reward = 0
         holes = self.state["metrics"]["holes"]
         bumpiness = self.state["metrics"]["bumpiness"]
@@ -428,10 +430,9 @@ class ImgHTetrisEnv(ImageTetrisBaseEnv):
 
 class MyTetrisEnv2(ImageTetrisBaseEnv):
     """Tetris environment with custom rewards and RGB array observations."""
-
-    GAME_OVER_REWARD = -100
+    GAME_OVER_REWARD = -50
     PLACED_REWARD = 0.5
-    LINE_REWARD = [0, 100, 250, 400, 550]
+    LINE_REWARD = [0, 100, 250, 750, 3000]
     HEIGHT_PENALTY = -0.1
     HOLE_PENALTY = -2.0
     BUMPINESS_PENALTY = -0.5
@@ -451,28 +452,23 @@ class MyTetrisEnv2(ImageTetrisBaseEnv):
 
     def calculate_reward(self, game_over, drop_distance, lines_cleared):
         """Custom reward function."""
+        assert self.state is not None, "self.state should not be None"
+        metrics = self.state["metrics"]
+
         reward = 0
-        reward += drop_distance
+        # reward += drop_distance
 
-        holes = self.state["metrics"]["holes"]
-        bumpiness = self.state["metrics"]["bumpiness"]
-        max_height = self.state["metrics"]["max_height"]
+        delta_holes = metrics["holes"] - self.holes
+        delta_bumpiness = metrics["bumpiness"] - self.bumpiness
+        delta_max_height = metrics["max_height"] - self.max_height
 
-        delta_bumpiness = bumpiness - self.bumpiness
-        delta_holes = holes - self.holes
-        delta_max_height = max_height - self.max_height
+        self.holes = metrics["holes"]
+        self.bumpiness = metrics["bumpiness"]
+        self.max_height = metrics["max_height"]
 
-        # Penalties for creating holes or increasing bumpiness
         reward += delta_holes * self.HOLE_PENALTY
         reward += delta_bumpiness * self.BUMPINESS_PENALTY
-
-        # Penalty for high towers
         reward += delta_max_height * self.HEIGHT_PENALTY
-
-        self.bumpiness = bumpiness
-        self.holes = holes
-        self.max_height = max_height
-
         reward += self.LINE_REWARD[lines_cleared]
 
         if game_over:
