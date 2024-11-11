@@ -44,9 +44,8 @@ class EpisodeEndMetricsCallback(BaseCallback):
                 score = info.get("score", 0)
                 lines_cleared = info.get("lines_cleared", 0)
                 pieces_placed = info.get("pieces_placed", 0)
-                metrics = info.get("metrics", {})
-                bumpiness = metrics.get("bumpiness", 0)
-                holes = metrics.get("holes", 0)
+                bumpiness = info.get("bumpiness", 0)
+                holes = info.get("holes", 0)
                 # Log to TensorBoard at the end of the episode
                 self.logger.record("episode/score", score)
                 self.logger.record("episode/lines_cleared", lines_cleared)
