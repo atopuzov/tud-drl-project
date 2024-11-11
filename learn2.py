@@ -47,11 +47,11 @@ class EpisodeEndMetricsCallback(BaseCallback):
                 bumpiness = info.get("bumpiness", 0)
                 holes = info.get("holes", 0)
                 # Log to TensorBoard at the end of the episode
-                self.logger.record("episode/score", score)
-                self.logger.record("episode/lines_cleared", lines_cleared)
-                self.logger.record("episode/pieces_placed", pieces_placed)
-                self.logger.record("episode/bumpiness", bumpiness)
-                self.logger.record("episode/holes", holes)
+                self.logger.record_mean("episode/score", score)
+                self.logger.record_mean("episode/lines_cleared", lines_cleared)
+                self.logger.record_mean("episode/pieces_placed", pieces_placed)
+                self.logger.record_mean("episode/bumpiness", bumpiness)
+                self.logger.record_mean("episode/holes", holes)
         return True
 
 
