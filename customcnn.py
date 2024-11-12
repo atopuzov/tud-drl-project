@@ -55,14 +55,13 @@ class TFEAtari(BaseFeaturesExtractor):
                 out_channels=32,
                 kernel_size=3,  # Reduced from 4x4
                 stride=1,
-                padding=1            
+                padding=1
             ), # After conv2: 20x10x32
             nn.ReLU(),
             nn.Flatten(),
         )
 
         with torch.no_grad():  # Don't track operations, we just need to calculate the output size
-            # example_input = torch.zeros(1, n_chan, board_height, board_width)
             example_input = torch.as_tensor(observation_space.sample()[None]).float()
             cnn_output_dim = self.cnn(example_input).shape[1]
 
@@ -348,3 +347,14 @@ class TetrisFeatureExtractor6(BaseFeaturesExtractor):
         """Process board through CNN and linear"""
         board_features = self.cnn(observations)
         return self.linear(board_features)
+
+
+FEATURE_EXTRACTORS = {
+    'TFEAtari': TFEAtari,
+    'TetrisFeatureExtractor': TetrisFeatureExtractor,
+    'TetrisFeatureExtractor2': TetrisFeatureExtractor2,
+    'TetrisFeatureExtractor3': TetrisFeatureExtractor3,
+    'TetrisFeatureExtractor4': TetrisFeatureExtractor4,
+    'TetrisFeatureExtractor5': TetrisFeatureExtractor5,
+    'TetrisFeatureExtractor6': TetrisFeatureExtractor6,
+}

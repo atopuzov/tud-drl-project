@@ -16,7 +16,7 @@ import gymnasium as gym
 import numpy as np
 from stable_baselines3 import DQN
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
 
 import tetrisenv  # noqa: F401  # pylint: disable=unused-import
 
@@ -30,6 +30,8 @@ if __name__ == "__main__":
     game_mode.add_argument("--pygame", action="store_true", help="Use pygame interface")
     game_mode.add_argument("--ascii", action="store_true", help="Use ascii interface")
     parser.add_argument("--env-name", type=str, default="Tetris-v3", help="Use SubprocVecEnv")
+    parser.add_argument("--frame-stack", action="store_true", help="Use frame stacking")
+    parser.add_argument("--frame-stack-size", type=int, default=4, help="Frame stack size")
     parser.add_argument("--random-seed", type=int, default=None, help="Use a random number seed")
     args = parser.parse_args()
 
@@ -41,6 +43,9 @@ if __name__ == "__main__":
         render_mode="pygame" if args.pygame else "ansi",
     )
     env = DummyVecEnv([lambda: Monitor(genv)])
+    if args.frame_stack:
+        print(f"Using {args.frame_stack_size} frame stacking")
+        env = VecFrameStack(env, args.frame_stack_size, channels_order="first")
 
     if args.random:
         model = DQN(

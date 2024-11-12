@@ -15,7 +15,7 @@ import torch
 from stable_baselines3 import DQN
 from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback, EvalCallback
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecEnv, VecFrameStack
 
 import customcnn
 import tetrisenv  # noqa: F401  # pylint: disable=unused-import
@@ -95,13 +95,15 @@ def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
     Returns:
         None
     """
+
+    feature_extractor = customcnn.FEATURE_EXTRACTORS.get(args.extractor, customcnn.TetrisFeatureExtractor)
+
     policy_kwargs = {
-        "features_extractor_class": customcnn.TFEAtari,
-        "net_arch": [256],  # MLP architecture after feature extraction
+        "features_extractor_class": feature_extractor,
+        "net_arch": args.net_arch,
         "activation_fn": torch.nn.ReLU,
     }
 
-    # TODO: See if it makes a difference (except on big convolutions)
     device = "cpu"
     if torch.backends.mps.is_available():
         device = "mps"
@@ -109,12 +111,13 @@ def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
         device = "cuda"
 
     model = DQN(
-        "MlpPolicy",
+        "CnnPolicy", # No difference to MlpPolicy since we are using a custom feature extractor
+        # https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/dqn/policies.py
         env,
         policy_kwargs=policy_kwargs,
         learning_rate=5e-5,
         gamma=0.99,
-        batch_size=64, 
+        batch_size=64,
         learning_starts=50000,
         buffer_size=500000,
         target_update_interval=2000,
@@ -202,6 +205,10 @@ def learn():
     parser.add_argument("--num-envs", type=int, default=1, help="Number of environments")
     parser.add_argument("--subproc", action="store_true", help="Use SubprocVecEnv")
     parser.add_argument("--env-name", type=str, default="Tetris-imgh", help="Environment name")
+    parser.add_argument("--extractor", type=str, default="TFEAtari", help="Feature extractor")
+    parser.add_argument("--frame-stack", action="store_true", help="Use frame stacking")
+    parser.add_argument("--frame-stack-size", type=int, default=4, help="Frame stack size")
+    parser.add_argument('--net-arch', type=int, nargs='+', default=[256], help='NN architecture')
     parser.add_argument("--random-seed", type=int, default=None, help="Use a random number seed")
     args = parser.parse_args()
 
@@ -216,7 +223,11 @@ def learn():
 
     vec_env_cls = SubprocVecEnv if args.subproc else DummyVecEnv
     env = make_vec_env(args.env_name, env_kwargs=env_kwargs, n_envs=args.num_envs, vec_env_cls=vec_env_cls)
-    print(f"Created {args.num_envs} {args.env_name} environments.")
+    if args.frame_stack:
+        print(f"Using {args.frame_stack_size} frame stacking")
+        pass
+    env = VecFrameStack(env, args.frame_stack_size, channels_order="first")
+    print(f"Created {args.num_envs} {args.env_name} environments. Using {args.extractor}.")
 
     new_learning = args.new or not args.model_file.exists()
 
