@@ -2,9 +2,14 @@ import argparse
 import datetime
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
-import plotille
+
+try:
+    import plotille
+
+    PLOTILLE_AVAILABLE = True
+except ImportError:
+    PLOTILLE_AVAILABLE = False
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 
@@ -65,6 +70,7 @@ def plot_metric_terminal(df, metric_name, use_time=True, width=80, height=20, la
         height (int): Height of the plot in characters
         last_n_minutes (float, optional): If provided, only show last n minutes of data
     """
+    plot_str = ""
     # Filter data for the selected metric
     metric_data = df[df["metric_name"] == metric_name]
 
@@ -78,8 +84,7 @@ def plot_metric_terminal(df, metric_name, use_time=True, width=80, height=20, la
     y_values = metric_data["value"]
 
     if len(y_values) == 0:
-        print("No data to plot")
-        return
+        return "No data to plot"
 
     # Calculate boundaries
     x_min, x_max = min(x_values), max(x_values)
@@ -113,7 +118,7 @@ def plot_metric_terminal(df, metric_name, use_time=True, width=80, height=20, la
     # Add labels
     title = f" {metric_name.capitalize()} over {'Time' if use_time else 'Steps'} "
     title_pos = (width - len(title)) // 2
-    print(" " * title_pos + title)
+    plot_str += " " * title_pos + title + "\n"
 
     # Add y-axis labels
     y_labels = [f"{y_max:.2f}", f"{(y_max + y_min)/2:.2f}", f"{y_min:.2f}"]
@@ -122,14 +127,14 @@ def plot_metric_terminal(df, metric_name, use_time=True, width=80, height=20, la
     # Print the plot with y-axis labels
     for i in range(height):
         if i == 0:
-            print(f"{y_labels[0]:>{max_label_width}} ", end="")
+            plot_str += f"{y_labels[0]:>{max_label_width}} "
         elif i == height // 2:
-            print(f"{y_labels[1]:>{max_label_width}} ", end="")
+            plot_str += f"{y_labels[1]:>{max_label_width}} "
         elif i == height - 1:
-            print(f"{y_labels[2]:>{max_label_width}} ", end="")
+            plot_str += f"{y_labels[2]:>{max_label_width}} "
         else:
-            print(" " * max_label_width + " ", end="")
-        print("".join(plot[i]))
+            plot_str += " " * max_label_width + " "
+        plot_str += "".join(plot[i]) + "\n"
 
     # Add x-axis labels
     x_labels = [f"{x_min:.1f}", f"{(x_min + x_max)/2:.1f}", f"{x_max:.1f}"]
@@ -138,12 +143,13 @@ def plot_metric_terminal(df, metric_name, use_time=True, width=80, height=20, la
     for pos, label in zip(label_positions, x_labels):
         space = pos - len(x_axis_label)
         x_axis_label += " " * space + label
-    print(x_axis_label)
+    plot_str += x_axis_label + "\n"
 
     # Add x-axis label
     x_label = "Time (minutes)" if use_time else "Steps"
     x_label_pos = (width - len(x_label)) // 2 + max_label_width + 1
-    print(" " * x_label_pos + x_label)
+    plot_str += " " * x_label_pos + x_label + "\n"
+    return plot_str
 
 
 def plot_metric_plotille(df, metric_name, use_time=True, width=80, height=20, last_n_minutes=None):
@@ -181,7 +187,6 @@ def plot_metric_plotille(df, metric_name, use_time=True, width=80, height=20, la
     fig.width = width
     fig.height = height
 
-    # fig.set_formatter(float, lambda x: '{:.2f}'.format(x))  # Add this line to format all float value
     def _num_formatter(val, chars, delta, left=False):
         align = "<" if left else ""
         return "{:{}{}.2f}".format(int(val), align, chars)
@@ -192,8 +197,8 @@ def plot_metric_plotille(df, metric_name, use_time=True, width=80, height=20, la
     title = f"{metric_name.capitalize()} over {'Time' if use_time else 'Steps'}"
 
     # Configure figure
-    fig.set_x_limits(min_=x_values.min(), max_=x_values.max())
-    fig.set_y_limits(min_=y_values.min(), max_=y_values.max())
+    fig.set_x_limits(min_=float(x_values.min()), max_=float(x_values.max()))
+    fig.set_y_limits(min_=float(y_values.min()), max_=float(y_values.max()))
     fig.color_mode = "byte"
 
     # Add plot with different styles
@@ -205,16 +210,6 @@ def plot_metric_plotille(df, metric_name, use_time=True, width=80, height=20, la
     return f"{title}\n\n" f"{fig.show(legend=False)}\n"
 
 
-# df = read_tfevent_files_as_dataframe("logs/DQN_0")
-# metric = 'episode/lines_cleared'
-# # metric = 'episode/pieces_placed'
-# # metric = 'episode/score'
-# # metric = 'rollout/ep_rew_mean'
-# # metric = 'rollout/ep_len_mean'
-
-# print(plot_metric_plotille(df, metric, use_time=True, width=80, height=20))
-
-
 def get_available_metrics(df):
     """Get list of all available metrics in the dataframe."""
     return sorted(df["metric_name"].unique())
@@ -223,11 +218,13 @@ def get_available_metrics(df):
 def main():
     parser = argparse.ArgumentParser(description="Plot metrics from TensorBoard event files")
     parser.add_argument("log_dir", type=str, help="Directory containing TensorBoard event files")
-    parser.add_argument("--metric", type=str, help="Metric to plot (if not specified, will show available metrics)")
+    parser.add_argument(
+        "-m", "--metric", type=str, help="Metric to plot (if not specified, will show available metrics)"
+    )
     parser.add_argument("--width", type=int, default=80, help="Width of the plot")
     parser.add_argument("--height", type=int, default=20, help="Height of the plot")
-    parser.add_argument("--use-steps", action="store_true", help="Use steps instead of time on x-axis")
-    parser.add_argument("--last-minutes", type=float, help="Only show last N minutes of data")
+    parser.add_argument("-s", "--steps", action="store_true", help="Use steps instead of time on x-axis")
+    parser.add_argument("-l", "--last-minutes", type=float, help="Only show last N minutes of data")
 
     args = parser.parse_args()
 
@@ -248,12 +245,13 @@ def main():
             print(f"  • {metric}")
         return
 
+    plot_func = plot_metric_plotille if PLOTILLE_AVAILABLE else plot_metric_terminal
     # Create and show the plot
     print(
-        plot_metric_plotille(
+        plot_func(
             df,
             args.metric,
-            use_time=not args.use_steps,
+            use_time=not args.steps,
             width=args.width,
             height=args.height,
             last_n_minutes=args.last_minutes,
