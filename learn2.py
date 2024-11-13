@@ -75,7 +75,7 @@ def continue_learning(args: argparse.Namespace, env: VecEnv):
         - Calls the `do_z_learning` function to continue the learning process.
     """
     try:
-        model = DQN.load(TETRIS_MODEL, env=env, tensorboard_log=LOG_PATH)
+        model = DQN.load(args.model_file, env=env, tensorboard_log=LOG_PATH)
     except FileNotFoundError:
         print(f"Unable to find {args.model_file}")
         sys.exit(-1)
@@ -96,10 +96,11 @@ def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
         None
     """
 
-    feature_extractor = customcnn.FEATURE_EXTRACTORS.get(args.extractor, customcnn.TetrisFeatureExtractor)
+    feature_extractor = customcnn.FEATURE_EXTRACTORS.get(args.extractor_name, customcnn.TetrisFeatureExtractor)
 
     policy_kwargs = {
         "features_extractor_class": feature_extractor,
+        "features_extractor_kwargs": {"features_dim": args.extractor_features},
         "net_arch": args.net_arch,
         "activation_fn": torch.nn.ReLU,
     }
@@ -115,19 +116,18 @@ def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
         # https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/dqn/policies.py
         env,
         policy_kwargs=policy_kwargs,
-        learning_rate=5e-5,
+        learning_rate=args.learning_rate,
         gamma=0.99,
-        batch_size=64,
-        learning_starts=50000,
-        buffer_size=500000,
-        target_update_interval=2000,
-        exploration_fraction=0.3,
-        exploration_initial_eps=1.0,
-        # exploration_final_eps=0.01,
-        exploration_final_eps=0.01,
+        batch_size=args.batch_size,
+        learning_starts=args.learning_starts,
+        buffer_size=args.buffer_size,
+        target_update_interval=args.target_update_interval,
+        exploration_fraction=args.exploration_fraction,
+        exploration_initial_eps=args.exploration_initial_eps,
+        exploration_final_eps=args.exploration_final_eps,
         # exploration_final_eps=0.1, # try with 0.05/0.1
         verbose=1,
-        tensorboard_log=LOG_PATH,
+        tensorboard_log=args.tensorboard_log,
         device=device,
     )
 
@@ -153,7 +153,7 @@ def do_z_learning(args: argparse.Namespace, env: VecEnv, model) -> None:
     if args.checkpoint:
         checkpoint_callback = CheckpointCallback(
             save_freq=args.checkpoint_interval,
-            save_path=CHECKPOINT_PATH,
+            save_path=args.checpoint_path,
             name_prefix=args.checkpoint_prefix,
             save_replay_buffer=args.save_replay,
             verbose=1,
@@ -168,16 +168,16 @@ def do_z_learning(args: argparse.Namespace, env: VecEnv, model) -> None:
                 callback=callbacks,
                 log_interval=100,
                 reset_num_timesteps=False,
+                tb_log_name=args.log_name,
             )
-            model.save(TETRIS_MODEL)
+            model.save(args.model_file)
     except KeyboardInterrupt:
         pass
 
-    model.save(TETRIS_MODEL)
+    model.save(args.model_file)
 
 
 def learn():
-
     parser = argparse.ArgumentParser(description="Game of Tetris")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--continue", action="store_true", help="Continue training")
@@ -192,8 +192,27 @@ def learn():
     )
     parser.add_argument("--timestamps", type=int, default=10e4, help="Number of timestumps")
     parser.add_argument("--model-file", type=Path, default="tetris_model.zip", help="Model file")
+
+    # Model parametars
+    # parser.add_argument("", type=float, default=0.1, help="")
+    # parser.add_argument("", type=int, default=1, help="")
+
+    parser.add_argument("--buffer-size", type=int, default=500000, help="Buffer size")
+    parser.add_argument("--batch-size", type=int, default=64, help="Batch size")
+    parser.add_argument("--learning-starts", type=int, default=50000, help="Learning starts")
+    parser.add_argument("--target-update-interval", type=int, default=2000, help="Target update interval")
+    parser.add_argument("--learning-rate", type=float, default=5e-5, help="Learning rate")
+    parser.add_argument("--exploration-fraction", type=float, default=0.3, help="Exploration fraction")
+    parser.add_argument("--exploration-initial-eps", type=float, default=0.3, help="Exploration initial eps")
+    parser.add_argument("--exploration-final-eps", type=float, default=0.01, help="Exploration final eps")
+
+    # tensorboard
+    parser.add_argument("--tensorboard-log", type=Path, default=LOG_PATH, help="Tensorboard logs path")
+    parser.add_argument("--log-name", type=str, default="DQN", help="Name for tensorboard")
+
     # Checkpoints
     parser.add_argument("--checkpoint", action="store_true", help="Checkpoint models")
+    parser.add_argument("--checkpoint-path", type=Path, default=CHECKPOINT_PATH, help="Checkpoint path")
     parser.add_argument("--checkpoint-interval", type=int, default=10000, help="Checkpoint interval")
     parser.add_argument(
         "--checkpoint-prefix",
@@ -205,7 +224,8 @@ def learn():
     parser.add_argument("--num-envs", type=int, default=1, help="Number of environments")
     parser.add_argument("--subproc", action="store_true", help="Use SubprocVecEnv")
     parser.add_argument("--env-name", type=str, default="Tetris-imgh", help="Environment name")
-    parser.add_argument("--extractor", type=str, default="TFEAtari", help="Feature extractor")
+    parser.add_argument("--extractor-name", type=str, default="TFEAtari", help="Feature extractor")
+    parser.add_argument('--extractor-features', type=int, default=256, help='Number of features to extract')    
     parser.add_argument("--frame-stack", action="store_true", help="Use frame stacking")
     parser.add_argument("--frame-stack-size", type=int, default=4, help="Frame stack size")
     parser.add_argument('--net-arch', type=int, nargs='+', default=[256], help='NN architecture')
@@ -223,11 +243,11 @@ def learn():
 
     vec_env_cls = SubprocVecEnv if args.subproc else DummyVecEnv
     env = make_vec_env(args.env_name, env_kwargs=env_kwargs, n_envs=args.num_envs, vec_env_cls=vec_env_cls)
+    print(f"Created {args.num_envs} {args.env_name} environments. Using {args.extractor_name}.")
+
     if args.frame_stack:
         print(f"Using {args.frame_stack_size} frame stacking")
-        pass
-    env = VecFrameStack(env, args.frame_stack_size, channels_order="first")
-    print(f"Created {args.num_envs} {args.env_name} environments. Using {args.extractor}.")
+        env = VecFrameStack(env, args.frame_stack_size, channels_order="first")   
 
     new_learning = args.new or not args.model_file.exists()
 

@@ -72,6 +72,75 @@ class TFEAtari(BaseFeaturesExtractor):
         board_features = self.cnn(observations)
         return self.linear(board_features)
 
+
+class TFEDLR(BaseFeaturesExtractor):
+    """
+    A custom feature extractor for Tetris game observations using a Convolutional Neural Network (CNN).
+    The network consists of three convolutional layers with max pooling followed by a linear layer.
+    Playing Tetris with Deep Reinforcement Learning paper
+    conv1: 32 5x5, relu 
+    conv2: 64 3x3, relu 
+    maxpol: 2x2
+    conv3: 64 3x3, relu 
+    maxpol: 2x2
+    fc-256, relu 
+    fc-256, relu
+
+    Args:
+        observation_space (spaces.Box): The observation space of the environment.
+        features_dim (int, optional): The dimension of the output features. Default is 128.
+        num_kernels (tuple[int, int, int], optional): A tuple specifying the number of kernels for each convolutional layer. Default is (32, 64, 64).
+        kernel_sizes (tuple[int, int, int], optional): A tuple specifying the kernel sizes for each convolutional layer. Default is (5, 3, 3).
+        pooling_kernel_sizes (tuple[int, int], optional): A tuple specifying the kernel sizes for each max pooling layer. Default is (2, 2).
+
+    Attributes:
+        cnn (nn.Sequential): The sequential container for the convolutional layers and activation functions.
+        linear (nn.Sequential): The sequential container for the linear layer and activation function.
+
+    Methods:
+        forward(observations: torch.Tensor) -> torch.Tensor:
+            Process the input observations through the CNN and linear layers to extract features.
+    """
+
+    def __init__(
+        self,
+        observation_space: spaces.Box,
+        features_dim: int = 256,
+        num_kernels: tuple[int, int, int] = (32, 64, 64),
+        kernel_sizes: tuple[int, int, int] = (5, 3, 3),
+        pooling_kernel_sizes: tuple[int, int] = (2, 2),
+    ):
+        super().__init__(observation_space, features_dim)
+        n_chan = observation_space.shape[0]
+
+        
+        self.cnn = nn.Sequential(
+            # First conv layer
+            nn.Conv2d(n_chan, num_kernels[0], kernel_size=kernel_sizes[0], stride=1, padding=1),
+            nn.ReLU(),
+            # Second conv layer
+            nn.Conv2d(num_kernels[0], num_kernels[1], kernel_size=kernel_sizes[1], stride=1, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=pooling_kernel_sizes[0], stride=2),
+            # Third conv layer
+            nn.Conv2d(num_kernels[1], num_kernels[2], kernel_size=kernel_sizes[2], stride=1, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=pooling_kernel_sizes[1], stride=2),
+            nn.Flatten(),
+        )
+
+        with torch.no_grad():  # Don't track operations, we just need to calculate the output size
+            example_input = torch.as_tensor(observation_space.sample()[None]).float()
+            cnn_output_dim = self.cnn(example_input).shape[1]
+
+        self.linear = nn.Sequential(nn.Linear(cnn_output_dim, features_dim), nn.ReLU())
+
+    def forward(self, observations) -> torch.Tensor:
+        """Process board through CNN and linear"""
+        board_features = self.cnn(observations)
+        return self.linear(board_features)
+
+
 class TetrisFeatureExtractor(BaseFeaturesExtractor):
     """
     A feature extractor for Tetris game observations using a Convolutional Neural Network (CNN).
@@ -227,66 +296,6 @@ class TetrisFeatureExtractor3(BaseFeaturesExtractor):
         return self.linear(board_features)
 
 
-class TetrisFeatureExtractor4(BaseFeaturesExtractor):
-    """
-    A custom feature extractor for Tetris game observations using a Convolutional Neural Network (CNN).
-    The network consists of three convolutional layers with max pooling followed by a linear layer.
-
-    Args:
-        observation_space (spaces.Box): The observation space of the environment.
-        features_dim (int, optional): The dimension of the output features. Default is 128.
-        num_kernels (tuple[int, int, int], optional): A tuple specifying the number of kernels for each convolutional layer. Default is (32, 64, 64).
-        kernel_sizes (tuple[int, int, int], optional): A tuple specifying the kernel sizes for each convolutional layer. Default is (5, 3, 3).
-        pooling_kernel_sizes (tuple[int, int], optional): A tuple specifying the kernel sizes for each max pooling layer. Default is (2, 2).
-
-    Attributes:
-        cnn (nn.Sequential): The sequential container for the convolutional layers and activation functions.
-        linear (nn.Sequential): The sequential container for the linear layer and activation function.
-
-    Methods:
-        forward(observations: torch.Tensor) -> torch.Tensor:
-            Process the input observations through the CNN and linear layers to extract features.
-    """
-
-    def __init__(
-        self,
-        observation_space: spaces.Box,
-        features_dim: int = 256,
-        num_kernels: tuple[int, int, int] = (32, 64, 64),
-        kernel_sizes: tuple[int, int, int] = (5, 3, 3),
-        pooling_kernel_sizes: tuple[int, int] = (2, 2),
-    ):
-        super().__init__(observation_space, features_dim)
-        n_chan = observation_space.shape[0]
-
-        # Playing Tetris with Deep Reinforcement Learning paper
-        self.cnn = nn.Sequential(
-            # First conv layer
-            nn.Conv2d(n_chan, num_kernels[0], kernel_size=kernel_sizes[0], stride=1, padding=1),
-            nn.ReLU(),
-            # Second conv layer
-            nn.Conv2d(num_kernels[0], num_kernels[1], kernel_size=kernel_sizes[1], stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=pooling_kernel_sizes[0], stride=2),
-            # Third conv layer
-            nn.Conv2d(num_kernels[1], num_kernels[2], kernel_size=kernel_sizes[2], stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=pooling_kernel_sizes[1], stride=2),
-            nn.Flatten(),
-        )
-
-        with torch.no_grad():  # Don't track operations, we just need to calculate the output size
-            example_input = torch.as_tensor(observation_space.sample()[None]).float()
-            cnn_output_dim = self.cnn(example_input).shape[1]
-
-        self.linear = nn.Sequential(nn.Linear(cnn_output_dim, features_dim), nn.ReLU())
-
-    def forward(self, observations) -> torch.Tensor:
-        """Process board through CNN and linear"""
-        board_features = self.cnn(observations)
-        return self.linear(board_features)
-
-
 class TetrisFeatureExtractor5(BaseFeaturesExtractor):
     def __init__(self, observation_space: spaces.Box, features_dim: int = 128):
         super().__init__(observation_space, features_dim)
@@ -351,10 +360,10 @@ class TetrisFeatureExtractor6(BaseFeaturesExtractor):
 
 FEATURE_EXTRACTORS = {
     'TFEAtari': TFEAtari,
+    'TFEDLR': TFEDLR,    
     'TetrisFeatureExtractor': TetrisFeatureExtractor,
     'TetrisFeatureExtractor2': TetrisFeatureExtractor2,
     'TetrisFeatureExtractor3': TetrisFeatureExtractor3,
-    'TetrisFeatureExtractor4': TetrisFeatureExtractor4,
     'TetrisFeatureExtractor5': TetrisFeatureExtractor5,
     'TetrisFeatureExtractor6': TetrisFeatureExtractor6,
 }
