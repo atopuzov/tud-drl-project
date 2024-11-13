@@ -19,6 +19,9 @@ numpy<2
 torchviz
 torchsummary
 
+# Console visualization
+plotille
+
 # Tools
 pytest
 jupyterlab
