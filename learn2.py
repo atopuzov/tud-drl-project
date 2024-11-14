@@ -55,11 +55,6 @@ class EpisodeEndMetricsCallback(BaseCallback):
         return True
 
 
-LOG_PATH = "logs"
-TETRIS_MODEL = "tetris_model.zip"
-CHECKPOINT_PATH = "models"
-
-
 def continue_learning(args: argparse.Namespace, env: VecEnv):
     """
     Continue the learning process for a given environment and model.
@@ -75,7 +70,7 @@ def continue_learning(args: argparse.Namespace, env: VecEnv):
         - Calls the `do_z_learning` function to continue the learning process.
     """
     try:
-        model = DQN.load(args.model_file, env=env, tensorboard_log=LOG_PATH)
+        model = DQN.load(args.model_file, env=env, tensorboard_log=args.tensorboard_log)
     except FileNotFoundError:
         print(f"Unable to find {args.model_file}")
         sys.exit(-1)
@@ -112,7 +107,7 @@ def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
         device = "cuda"
 
     model = DQN(
-        "CnnPolicy", # No difference to MlpPolicy since we are using a custom feature extractor
+        "CnnPolicy",  # No difference to MlpPolicy since we are using a custom feature extractor
         # https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/dqn/policies.py
         env,
         policy_kwargs=policy_kwargs,
@@ -156,7 +151,7 @@ def do_z_learning(args: argparse.Namespace, env: VecEnv, model) -> None:
             save_path=args.checpoint_path,
             name_prefix=args.checkpoint_prefix,
             save_replay_buffer=args.save_replay,
-            verbose=1,
+            verbose=0 if args.quiet else 1,
         )
         callbacks.append(checkpoint_callback)
 
@@ -178,6 +173,7 @@ def do_z_learning(args: argparse.Namespace, env: VecEnv, model) -> None:
 
 
 def learn():
+    """Set up the learning environment and start the learning process."""
     parser = argparse.ArgumentParser(description="Game of Tetris")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--continue", action="store_true", help="Continue training")
@@ -190,13 +186,10 @@ def learn():
         default=Path("replay_buffer.zip"),
         help="Replay buffer file",
     )
-    parser.add_argument("--timestamps", type=int, default=10e4, help="Number of timestumps")
-    parser.add_argument("--model-file", type=Path, default="tetris_model.zip", help="Model file")
+    parser.add_argument("--timestamps", type=int, default=10e4, help="Number of timestamps")
+    parser.add_argument("--model-file", type=Path, help="Model file")
 
-    # Model parametars
-    # parser.add_argument("", type=float, default=0.1, help="")
-    # parser.add_argument("", type=int, default=1, help="")
-
+    # Model parameters
     parser.add_argument("--buffer-size", type=int, default=500000, help="Buffer size")
     parser.add_argument("--batch-size", type=int, default=64, help="Batch size")
     parser.add_argument("--learning-starts", type=int, default=50000, help="Learning starts")
@@ -206,13 +199,20 @@ def learn():
     parser.add_argument("--exploration-initial-eps", type=float, default=0.3, help="Exploration initial eps")
     parser.add_argument("--exploration-final-eps", type=float, default=0.01, help="Exploration final eps")
 
-    # tensorboard
-    parser.add_argument("--tensorboard-log", type=Path, default=LOG_PATH, help="Tensorboard logs path")
+    # Model architecture
+    parser.add_argument("--extractor-name", type=str, default="TFEAtari", help="Feature extractor")
+    parser.add_argument("--extractor-features", type=int, default=256, help="Number of features to extract")
+    parser.add_argument("--net-arch", type=int, nargs="+", default=[256], help="NN architecture")
+
+    # Directories
+    parser.add_argument("--work-dir", type=Path, default=Path("."), help="Base directory for logs and checkpoints")
+    parser.add_argument("--tensorboard-log", type=Path, help="Tensorboard logs path")
+    parser.add_argument("--checkpoint-path", type=Path, help="Checkpoint path")
+    parser.add_argument("--best-model-path", type=Path, help="Best model save path")
     parser.add_argument("--log-name", type=str, default="DQN", help="Name for tensorboard")
 
     # Checkpoints
     parser.add_argument("--checkpoint", action="store_true", help="Checkpoint models")
-    parser.add_argument("--checkpoint-path", type=Path, default=CHECKPOINT_PATH, help="Checkpoint path")
     parser.add_argument("--checkpoint-interval", type=int, default=10000, help="Checkpoint interval")
     parser.add_argument(
         "--checkpoint-prefix",
@@ -220,24 +220,48 @@ def learn():
         default="tetris_model",
         help="Model file name prefix for checkpointing",
     )
-    # TODO:
+
+    # Environment
     parser.add_argument("--num-envs", type=int, default=1, help="Number of environments")
     parser.add_argument("--subproc", action="store_true", help="Use SubprocVecEnv")
     parser.add_argument("--env-name", type=str, default="Tetris-imgh", help="Environment name")
-    parser.add_argument("--extractor-name", type=str, default="TFEAtari", help="Feature extractor")
-    parser.add_argument('--extractor-features', type=int, default=256, help='Number of features to extract')    
     parser.add_argument("--frame-stack", action="store_true", help="Use frame stacking")
     parser.add_argument("--frame-stack-size", type=int, default=4, help="Frame stack size")
-    parser.add_argument('--net-arch', type=int, nargs='+', default=[256], help='NN architecture')
+    parser.add_argument(
+        "--tetrominoes",
+        type=lambda s: s.upper(),
+        nargs="+",
+        default=["I", "O", "T", "L", "J"],
+        choices=["I", "O", "T", "L", "J", "S", "Z"],
+        help="Tetrominoes to use (must be one of: I, O, T, L, J, S, Z)",
+    )
+
+    # Other
     parser.add_argument("--random-seed", type=int, default=None, help="Use a random number seed")
+    parser.add_argument("--quiet", action="store_true", help="Suppress output")
+    parser.add_argument("--device", type=str, default="auto", help="Device to use (auto, cpu, cuda, mps)")
+
     args = parser.parse_args()
 
-    # Create the environment
-    tetrominoes = ["I", "O", "T", "L", "J"]
+    # Set default paths based on work dir
+    if not args.tensorboard_log:
+        args.tensorboard_log = args.work_dir / "logs"
+    if not args.checkpoint_path:
+        args.checkpoint_path = args.work_dir / "checkpoints"
+    if not args.best_model_path:
+        args.best_model_path = args.work_dir / "best_model"
+    if not args.model_file:
+        args.model_file = args.work_dir / "tetris_model.zip"
 
+    # Ensure directories exist
+    args.tensorboard_log.mkdir(parents=True, exist_ok=True)
+    args.checkpoint_path.mkdir(parents=True, exist_ok=True)
+    args.best_model_path.mkdir(parents=True, exist_ok=True)
+
+    # Create the environment
     env_kwargs = {
         "grid_size": (20, 10),
-        "tetrominoes": tetrominoes,
+        "tetrominoes": args.tetrominoes,
         "render_mode": "ansi",
     }
 
@@ -247,7 +271,7 @@ def learn():
 
     if args.frame_stack:
         print(f"Using {args.frame_stack_size} frame stacking")
-        env = VecFrameStack(env, args.frame_stack_size, channels_order="first")   
+        env = VecFrameStack(env, args.frame_stack_size, channels_order="first")
 
     new_learning = args.new or not args.model_file.exists()
 
