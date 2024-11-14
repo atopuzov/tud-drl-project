@@ -1,13 +1,125 @@
 ---
 experiments:
-    - work_dir: "experiment_1"
+    # Baseline Image Env Comparison with Different Feature Extractors
+    - work_dir: "exp_01a_imgh_atari"
+      env_name: "Tetris-imgh"
+      num_envs: 4
+      extractor_name: "TFEAtari"
+      net_arch: [256]
+      buffer_size: 500000
+      batch_size: 64
+      learning_rate: 5e-5
+      exploration_fraction: 0.3
+      exploration_initial_eps: 0.3
+      exploration_final_eps: 0.01
+      tetrominoes: ["I", "O", "T", "L", "J"]
+      checkpoint: true
+      checkpoint_interval: 10000
+      timestamps: 100000
+
+    - work_dir: "exp_01b_v3_atari"
       env_name: "Tetris-v3"
       num_envs: 4
       extractor_name: "TFEAtari"
-      net_arch: [64, 64]
+      net_arch: [256]
+      buffer_size: 500000
+      batch_size: 64
+      learning_rate: 5e-5
+      exploration_fraction: 0.3
+      exploration_initial_eps: 0.3
+      exploration_final_eps: 0.01
+      tetrominoes: ["I", "O", "T", "L", "J"]
+      checkpoint: true
+      checkpoint_interval: 10000
+      timestamps: 100000
 
-    - work_dir: "experiment_2"
+    # Frame Stack Investigation Across Environments
+    - work_dir: "exp_02a_imgh_frame4"
+      env_name: "Tetris-imgh"
+      num_envs: 4
+      extractor_name: "TetrisFeatureExtractor"
+      net_arch: [256]
+      frame_stack: true
+      frame_stack_size: 4
+      timestamps: 100000
+
+    - work_dir: "exp_02b_v3_frame4"
       env_name: "Tetris-v3"
-      num_envs: 2
-      extractor_name: "TFEDLR"
-      net_arch: [128, 128]
+      num_envs: 4
+      extractor_name: "TetrisFeatureExtractor"
+      net_arch: [256]
+      frame_stack: true
+      frame_stack_size: 4
+      timestamps: 100000
+
+    # Learning Rate Investigation Across Environments
+    - work_dir: "exp_03a_imgh_lr"
+      env_name: "Tetris-imgh"
+      num_envs: 4
+      extractor_name: "TetrisFeatureExtractor"
+      net_arch: [256]
+      learning_rate: 1e-4
+      timestamps: 100000
+
+    - work_dir: "exp_03b_v3_lr"
+      env_name: "Tetris-v3"
+      num_envs: 4
+      extractor_name: "TetrisFeatureExtractor"
+      net_arch: [256]
+      learning_rate: 1e-4
+      timestamps: 100000
+
+    # Network Architecture Investigation Across Environments
+    - work_dir: "exp_04a_imgh_deeper"
+      env_name: "Tetris-imgh"
+      num_envs: 4
+      extractor_name: "TetrisFeatureExtractor"
+      net_arch: [256, 256]
+      timestamps: 100000
+
+    - work_dir: "exp_04b_v3_deeper"
+      env_name: "Tetris-v3"
+      num_envs: 4
+      extractor_name: "TetrisFeatureExtractor"
+      net_arch: [256, 256]
+      timestamps: 100000
+
+    # Exploration Strategy Investigation Across Environments
+    - work_dir: "exp_05a_imgh_explore"
+      env_name: "Tetris-imgh"
+      num_envs: 4
+      extractor_name: "TetrisFeatureExtractor"
+      net_arch: [256]
+      exploration_fraction: 0.5
+      exploration_initial_eps: 0.5
+      exploration_final_eps: 0.02
+      timestamps: 100000
+
+    - work_dir: "exp_05b_v3_explore"
+      env_name: "Tetris-v3"
+      num_envs: 4
+      extractor_name: "TetrisFeatureExtractor"
+      net_arch: [256]
+      exploration_fraction: 0.5
+      exploration_initial_eps: 0.5
+      exploration_final_eps: 0.02
+      timestamps: 100000
+
+    # Batch and Buffer Size Investigation Across Environments
+    - work_dir: "exp_06a_imgh_buffer"
+      env_name: "Tetris-imgh"
+      num_envs: 4
+      extractor_name: "TetrisFeatureExtractor"
+      net_arch: [256]
+      buffer_size: 1000000
+      batch_size: 128
+      timestamps: 100000
+
+    - work_dir: "exp_06b_v3_buffer"
+      env_name: "Tetris-v3"
+      num_envs: 4
+      extractor_name: "TetrisFeatureExtractor"
+      net_arch: [256]
+      buffer_size: 1000000
+      batch_size: 128
+      timestamps: 100000

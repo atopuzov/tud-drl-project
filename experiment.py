@@ -18,25 +18,79 @@ def run_experiment(config: dict):
 
     log_file = experiment_dir / "experiment.log"
 
+    # Base command
     args = [
         sys.executable,  # Path to the Python interpreter
         "learn2.py",
-        "--env-name",
-        config["env_name"],
-        "--num-envs",
-        str(config["num_envs"]),
-        "--extractor-name",
-        config["extractor_name"],
-        "--work-dir",
-        str(experiment_dir),
     ]
 
-    if config.get("net_arch"):
+    # Model parameters
+    param_map = {
+        "env_name": "--env-name",
+        "num_envs": "--num-envs",
+        "extractor_name": "--extractor-name",
+        "buffer_size": "--buffer-size",
+        "batch_size": "--batch-size",
+        "learning_starts": "--learning-starts",
+        "target_update_interval": "--target-update-interval",
+        "learning_rate": "--learning-rate",
+        "exploration_fraction": "--exploration-fraction",
+        "exploration_initial_eps": "--exploration-initial-eps",
+        "exploration_final_eps": "--exploration-final-eps",
+        "extractor_features": "--extractor-features",
+        "timestamps": "--timestamps",
+        "random_seed": "--random-seed",
+        "device": "--device",
+        "frame_stack_size": "--frame-stack-size",
+        "checkpoint_interval": "--checkpoint-interval",
+        "checkpoint_prefix": "--checkpoint-prefix",
+        "log_name": "--log-name",
+    }
+
+    # Add parameters if they exist in config
+    for param, flag in param_map.items():
+        if param in config:
+            args.extend([flag, str(config[param])])
+
+    # Special handling for paths
+    path_map = {
+        "tensorboard_log": "--tensorboard-log",
+        "checkpoint_path": "--checkpoint-path",
+        "best_model_path": "--best-model-path",
+        "model_file": "--model-file",
+        "replay_buffer_file": "--replay-buffer-file",
+    }
+    for param, flag in path_map.items():
+        if param in config:
+            args.extend([flag, str(Path(config[param]))])
+
+    # Handle net_arch (list parameter)
+    if "net_arch" in config:
         args.append("--net-arch")
         args.extend(str(a) for a in config["net_arch"])
 
-    if config.get("frame_stack"):
-        args.extend(["--frame-stack", "--frame-stack-size", str(config["frame_stack_size"])])
+    # Handle tetrominoes (list parameter)
+    if "tetrominoes" in config:
+        args.append("--tetrominoes")
+        args.extend(str(t) for t in config["tetrominoes"])
+
+    # Boolean flags
+    bool_flags = {
+        "subproc": "--subproc",
+        "frame_stack": "--frame-stack",
+        "quiet": "--quiet",
+        "checkpoint": "--checkpoint",
+        "save_replay": "--save-replay",
+        "load_replay": "--load-replay",
+        "new": "--new",
+        "continue": "--continue",
+    }
+    for param, flag in bool_flags.items():
+        if param in config and config[param]:
+            args.append(flag)
+
+    # Always add work directory
+    args.extend(["--work-dir", str(experiment_dir)])
 
     print(f"Running experiment with command: {' '.join(args)}")
     with open(log_file, "w", encoding="utf-8") as log:
@@ -53,7 +107,7 @@ def monitor_processes(processes: list[tuple[subprocess.Popen, Path]]) -> None:
     """
     try:
         while processes:
-            for process, log_file in processes:
+            for process, log_file in processes[:]:  # Create a copy of the list for iteration
                 retcode = process.poll()
                 if retcode is not None:  # Process finished
                     print(f"Process {process.pid} finished with return code {retcode}. Log: {log_file}")
