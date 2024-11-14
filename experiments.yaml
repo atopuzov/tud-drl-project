@@ -1,0 +1,13 @@
+---
+experiments:
+    - work_dir: "experiment_1"
+      env_name: "Tetris-v3"
+      num_envs: 4
+      extractor_name: "TFEAtari"
+      net_arch: [64, 64]
+
+    - work_dir: "experiment_2"
+      env_name: "Tetris-v3"
+      num_envs: 2
+      extractor_name: "TFEDLR"
+      net_arch: [128, 128]
