@@ -139,7 +139,7 @@ def do_z_learning(args: argparse.Namespace, env: VecEnv, model) -> None:
         model: The model to be trained.
     """
     best_model = "best_model"
-    eval_callback = EvalCallback(env, eval_freq=10000, best_model_save_path=best_model)
+    eval_callback = EvalCallback(env, eval_freq=10000, best_model_save_path=args.best_model_path)
 
     record_game_info_callback = EpisodeEndMetricsCallback()
 
@@ -148,7 +148,7 @@ def do_z_learning(args: argparse.Namespace, env: VecEnv, model) -> None:
     if args.checkpoint:
         checkpoint_callback = CheckpointCallback(
             save_freq=args.checkpoint_interval,
-            save_path=args.checpoint_path,
+            save_path=args.checkpoint_path,
             name_prefix=args.checkpoint_prefix,
             save_replay_buffer=args.save_replay,
             verbose=0 if args.quiet else 1,
