@@ -29,6 +29,7 @@ def run_experiment(config: dict):
         "env_name": "--env-name",
         "num_envs": "--num-envs",
         "extractor_name": "--extractor-name",
+        "gamma": "--gamma",
         "buffer_size": "--buffer-size",
         "batch_size": "--batch-size",
         "learning_starts": "--learning-starts",

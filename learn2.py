@@ -116,7 +116,7 @@ def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
         env,
         policy_kwargs=policy_kwargs,
         learning_rate=args.learning_rate,
-        gamma=0.99,
+        gamma=args.gamma,
         batch_size=args.batch_size,
         learning_starts=args.learning_starts,
         buffer_size=args.buffer_size,
@@ -196,6 +196,7 @@ def learn():
     parser.add_argument("--model-file", type=Path, help="Model file")
 
     # Model parameters https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/dqn/dqn.py
+    parser.add_argument("--gamma", type=float, default=0.99, help="Gamma")
     parser.add_argument("--buffer-size", type=int, default=500000, help="Buffer size")
     parser.add_argument("--batch-size", type=int, default=64, help="Batch size")
     parser.add_argument("--learning-starts", type=int, default=50000, help="Learning starts")
