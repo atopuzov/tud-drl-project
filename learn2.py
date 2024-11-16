@@ -104,6 +104,10 @@ def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
     if torch.backends.mps.is_available():
         device = "mps"
     elif torch.cuda.is_available():
+        # PyTorch config for better GPU usage
+        torch.backends.cudnn.benchmark = True  # Enable auto-tuner
+        torch.backends.cuda.matmul.allow_tf32 = True  # Allow TF32 on Ampere (Gf RTX 30, RTX A)
+        torch.backends.cudnn.allow_tf32 = True
         device = "cuda"
 
     model = DQN(
@@ -120,6 +124,8 @@ def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
         exploration_fraction=args.exploration_fraction,
         exploration_initial_eps=args.exploration_initial_eps,
         exploration_final_eps=args.exploration_final_eps,
+        train_freq=args.train_freq,
+        gradient_steps=args.gradient_steps,
         # exploration_final_eps=0.1, # try with 0.05/0.1
         verbose=1,
         tensorboard_log=args.tensorboard_log,
@@ -189,7 +195,7 @@ def learn():
     parser.add_argument("--timestamps", type=int, default=10e4, help="Number of timestamps")
     parser.add_argument("--model-file", type=Path, help="Model file")
 
-    # Model parameters
+    # Model parameters https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/dqn/dqn.py
     parser.add_argument("--buffer-size", type=int, default=500000, help="Buffer size")
     parser.add_argument("--batch-size", type=int, default=64, help="Batch size")
     parser.add_argument("--learning-starts", type=int, default=50000, help="Learning starts")
@@ -198,6 +204,8 @@ def learn():
     parser.add_argument("--exploration-fraction", type=float, default=0.3, help="Exploration fraction")
     parser.add_argument("--exploration-initial-eps", type=float, default=0.3, help="Exploration initial eps")
     parser.add_argument("--exploration-final-eps", type=float, default=0.01, help="Exploration final eps")
+    parser.add_argument("--train-freq", type=int, default=4, help="Train frequency")
+    parser.add_argument("--gradient-steps", type=int, default=1, help="Gradinet steps")
 
     # Model architecture
     parser.add_argument("--extractor-name", type=str, default="TFEAtari", help="Feature extractor")
@@ -242,6 +250,7 @@ def learn():
     parser.add_argument("--device", type=str, default="auto", help="Device to use (auto, cpu, cuda, mps)")
 
     args = parser.parse_args()
+    print(' '.join(f'{k}={v}' for k, v in vars(args).items()))
 
     # Set default paths based on work dir
     if not args.tensorboard_log:

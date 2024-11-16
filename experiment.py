@@ -38,6 +38,8 @@ def run_experiment(config: dict):
         "exploration_initial_eps": "--exploration-initial-eps",
         "exploration_final_eps": "--exploration-final-eps",
         "extractor_features": "--extractor-features",
+        "train_freq": "--train-freq",
+        "gradient_steps": "--gradient-steps",
         "timestamps": "--timestamps",
         "random_seed": "--random-seed",
         "device": "--device",
