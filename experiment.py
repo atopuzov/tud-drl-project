@@ -2,12 +2,13 @@ import subprocess
 import time
 from pathlib import Path
 import sys
+from typing import Tuple
 import yaml
 import argparse
 import signal
 
 
-def run_experiment(config: dict):
+def run_experiment(config: dict) -> Tuple[subprocess.Popen, Path]:
     """
     Run an experiment based on the configuration provided in a dictionary.
 
@@ -97,25 +98,74 @@ def run_experiment(config: dict):
     args.extend(["--work-dir", str(experiment_dir)])
 
     print(f"Running experiment with command: {' '.join(args)}")
-    with open(log_file, "w", encoding="utf-8") as log:
+    with open(log_file, "a", encoding="utf-8") as log:
         process = subprocess.Popen(args, stdout=log, stderr=log)
         return process, log_file
 
 
-def monitor_processes(processes: list[tuple[subprocess.Popen, Path]]) -> None:
+def monitor_processes(processes: list[tuple[subprocess.Popen, Path]], max_restarts: int = 10, restart_delay: float = 30.0, min_runtime: float = 60.0) -> None:
     """
-    Monitor the status of multiple subprocesses.
+    Monitor the status of multiple subprocesses. Reruns failed processes with safeguards.
 
     Args:
-        processes (list): List of tuples containing subprocess and log file path.
+        processes (list): List of tuples containing subprocess Popen object and log file path
+        max_restarts (int): Maximum number of restart attempts per process
+        restart_delay (float): Delay in seconds between restart attempts
+        min_runtime (float): Minimum runtime in seconds before reset restart counter
     """
+    # Track restart attempts and start times for each process
+    process_stats = {p.pid: {"restarts": 0, "last_start": time.time()} for p, _ in processes}
+
     try:
         while processes:
-            for process, log_file in processes[:]:  # Create a copy of the list for iteration
+            for proc_tuple in processes[:]:  # Use a different name to avoid confusion
+                process, log_file = proc_tuple
                 retcode = process.poll()
+                current_time = time.time()
+
                 if retcode is not None:  # Process finished
-                    print(f"Process {process.pid} finished with return code {retcode}. Log: {log_file}")
-                    processes.remove((process, log_file))
+                    runtime = current_time - process_stats[process.pid]["last_start"]
+
+                    if retcode == 0:  # Clean exit
+                        print(f"Process {process.pid} finished successfully. Log: {log_file}")
+                        processes.remove(proc_tuple)
+                        process_stats.pop(process.pid)
+                    else:  # Failed exit
+                        # Reset restart counter if process ran for minimum time
+                        if runtime > min_runtime:
+                            process_stats[process.pid]["restarts"] = 0
+
+                        # Check if we should restart
+                        if process_stats[process.pid]["restarts"] < max_restarts:
+                            print(f"Process {process.pid} failed with return code {retcode}. "
+                                  f"Restart attempt {process_stats[process.pid]['restarts'] + 1}/{max_restarts} "
+                                  f"after {restart_delay} seconds delay...")
+
+                            # Remove old process first
+                            processes.remove(proc_tuple)
+                            process_stats.pop(process.pid)
+
+                            # Wait before restarting
+                            time.sleep(restart_delay)
+
+                            # Start new process
+                            new_process = subprocess.Popen(
+                                process.args,
+                                stdout=open(log_file, "a", encoding="utf-8"),
+                                stderr=subprocess.STDOUT
+                            )
+
+                            # Add new process tracking info
+                            processes.append((new_process, log_file))
+                            process_stats[new_process.pid] = {
+                                "restarts": process_stats.get(process.pid, {}).get("restarts", 0) + 1,
+                                "last_start": time.time()
+                            }
+                        else:
+                            print(f"Process {process.pid} failed with return code {retcode}. "
+                                  f"Max restarts ({max_restarts}) reached. Giving up.")
+                            processes.remove(proc_tuple)
+                            process_stats.pop(process.pid)
                 else:
                     print(f"Process {process.pid} is still running. Log: {log_file}")
             time.sleep(5)
