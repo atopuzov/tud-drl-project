@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 import yaml
 import argparse
+import signal
 
 
 def run_experiment(config: dict):
@@ -119,11 +120,25 @@ def monitor_processes(processes: list[tuple[subprocess.Popen, Path]]) -> None:
                     print(f"Process {process.pid} is still running. Log: {log_file}")
             time.sleep(5)
     except KeyboardInterrupt:
-        print("Terminating all processes...")
+        print("\nAttempting graceful shutdown of processes...")
+        # Send SIGINT to all processes first
         for process, _ in processes:
-            process.terminate()
-        for process, _ in processes:
-            process.wait()
+            if sys.platform.startswith("win"):
+                process.send_signal(signal.CTRL_BREAK_EVENT)
+            else:
+                process.send_signal(signal.SIGINT)
+
+        # Then wait for each process with timeout
+        for process, log_file in processes:
+            try:
+                process.wait(timeout=30)  # Wait up to 30 seconds for graceful shutdown
+                print(f"Process {process.pid} shut down gracefully. Log: {log_file}")
+            except subprocess.TimeoutExpired:
+                print(f"Process {process.pid} did not shut down gracefully. Terminating...")
+                process.terminate()
+                process.wait()  # Wait for forced termination
+                print(f"Process {process.pid} was forcefully terminated. Log: {log_file}")
+
 
 
 if __name__ == "__main__":
