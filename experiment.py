@@ -30,6 +30,7 @@ def run_experiment(config: dict) -> Tuple[subprocess.Popen, Path]:
     param_map = {
         "env_name": "--env-name",
         "num_envs": "--num-envs",
+        "piece_gen": "--piece-gen",
         "extractor_name": "--extractor-name",
         "gamma": "--gamma",
         "buffer_size": "--buffer-size",

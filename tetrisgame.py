@@ -159,6 +159,13 @@ class TetrominoRandomGenerator(TetrominoGenerator):
         return self.rng.choice(self.tetrominoes)
 
 
+PIECE_GENERATOR_CLASSES = {
+    "7bag": TetrominoRandom7BagGenerator,
+    "14bag": TetrominoRandom14BagGenerator,
+    "rnd": TetrominoRandomGenerator,
+}
+
+
 class TetrisGame:
     """Core Tetris game logic independent of any specific interface."""
 
@@ -208,14 +215,11 @@ class TetrisGame:
         self.board_height, self.board_width = grid_size
         self.tetrominoes: List[str] = tetrominoes or list(self.TETROMINOES.keys())
         self.rng: np.random.Generator = rng if rng is not None else np.random.default_rng()
-        if piece_gen == "7bag":
-            self.piece_generator = TetrominoRandom7BagGenerator(rng=self.rng, tetrominoes=self.tetrominoes)
-        elif piece_gen == "14bag":
-            self.piece_generator = TetrominoRandom14BagGenerator(rng=self.rng, tetrominoes=self.tetrominoes)
-        elif piece_gen == "rnd":
-            self.piece_generator = TetrominoRandomGenerator(rng=self.rng, tetrominoes=self.tetrominoes)
-        else:
-            self.piece_generator = TetrominoRandom7BagGenerator(rng=self.rng, tetrominoes=self.tetrominoes)
+
+        # Piece generator
+        piece_generator_class = PIECE_GENERATOR_CLASSES.get(piece_gen, TetrominoRandom7BagGenerator)
+        self.piece_generator = piece_generator_class(rng=self.rng, tetrominoes=self.tetrominoes)
+
         self.ticks_per_drop: int = ticks_per_drop
 
         # Game state

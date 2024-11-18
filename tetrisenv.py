@@ -21,6 +21,7 @@ env_kwargs = {
     "grid_size": (20, 10),
     "tetrominoes": None,
     "render_mode": None,
+    "piece_gen": None,
     # "ticks_per_drop": 1,
 }
 gym.register("Tetris-base", entry_point="tetrisenv:BaseRewardTetrisEnv", kwargs=env_kwargs)
@@ -44,7 +45,7 @@ class BaseTetrisEnv(gym.Env):
         "render_fps": 4,
     }
 
-    def __init__(self, grid_size=(20, 10), tetrominoes: Optional[List[str]] = None, render_mode=None, ticks_per_drop=1):
+    def __init__(self, grid_size=(20, 10), tetrominoes: Optional[List[str]] = None, render_mode=None, piece_gen=None, ticks_per_drop=1):
         super().__init__()
 
         self.render_mode = render_mode
@@ -57,6 +58,7 @@ class BaseTetrisEnv(gym.Env):
             tetrominoes=self.tetrominoes,
             ticks_per_drop=self.ticks_per_drop,
             rng=self.np_random,
+            piece_gen=piece_gen,
         )
 
         self.renderer: Optional[TetrisRenderer] = None
@@ -114,10 +116,10 @@ class BaseRewardTetrisEnv(BaseTetrisEnv):
 
     GAME_OVER_PENALTY = -100
 
-    def __init__(self, grid_size=(20, 10), tetrominoes: Optional[List[str]] = None, render_mode=None):
-        super().__init__(grid_size=grid_size, tetrominoes=tetrominoes, render_mode=render_mode)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         # self.observation_space = spaces.Box(low=0, high=1, shape=grid_size, dtype=np.int32)
-        self.observation_space = spaces.Box(low=0, high=1, shape=(grid_size[0] * grid_size[1],), dtype=np.int32)
+        self.observation_space = spaces.Box(low=0, high=1, shape=(self.grid_size[0] * self.grid_size[1],), dtype=np.int32)
 
     def _get_observation(self) -> np.ndarray | Dict:
         """Return the current state of the game grid."""
@@ -134,8 +136,8 @@ class BaseRewardTetrisEnv(BaseTetrisEnv):
 class ScoreRewardTetrisEnv(BaseRewardTetrisEnv):
     GAME_OVER_PENALTY = -100
 
-    def __init__(self, grid_size=(20, 10), tetrominoes: Optional[List[str]] = None, render_mode=None):
-        super().__init__(grid_size=grid_size, tetrominoes=tetrominoes, render_mode=render_mode)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.score = 0
 
     def reset(self, seed=None):
@@ -350,8 +352,8 @@ class MyTetrisEnv(BaseRewardTetrisEnv):
 class ImageTetrisBaseEnv(BaseTetrisEnv):
     """Tetris environment with image observation"""
 
-    def __init__(self, grid_size=(20, 10), tetrominoes: Optional[List[str]] = None, render_mode=None):
-        super().__init__(grid_size=grid_size, tetrominoes=tetrominoes, render_mode=render_mode)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         # The minimal resolution for an image is 36x36 for the default `CnnPolicy`.
         # You might need to use a custom features extractor cf.
         # FIX: np.kron(array, np.ones(2,2)) -> scale 2x
@@ -475,6 +477,91 @@ class MyTetrisEnv2(ImageTetrisBaseEnv):
             reward += self.GAME_OVER_REWARD
 
         return reward
+
+
+
+# TODO
+# class ImprovedTetrisEnv(BaseRewardTetrisEnv):
+#     """Tetris environment with improved rewards based on proven heuristics."""
+
+#     # Reward weights based on research from Dellacherie and others
+#     LANDING_HEIGHT_WEIGHT = -0.51  # Height where piece is placed
+#     ROWS_CLEARED_WEIGHT = 0.76     # Number of rows cleared
+#     HOLES_WEIGHT = -0.36           # Number of holes created
+#     BUMPINESS_WEIGHT = -0.18       # Surface roughness
+
+#     # Additional strategic weights to implement
+#     WELL_WEIGHT = -0.18            # Penalty for creating wells
+#     HOLE_DEPTH_WEIGHT = -0.24      # Extra penalty for deep holes
+#     SURFACE_WIDTH_WEIGHT = -0.12   # Penalty for wide surface gaps
+
+#     # Game event rewards
+#     GAME_OVER_PENALTY = -100
+#     LINES_REWARD = [0, 100, 300, 600, 1000]  # Exponential reward for more lines
+
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         # Track metrics for calculating deltas
+#         self.holes = 0
+#         self.hole_depths = 0
+#         self.bumpiness = 0
+#         self.wells = 0
+#         self.surface_width = 0
+#         self.landing_height = 0
+
+#     def reset(self, *args, **kwargs):
+#         """Reset all tracked metrics."""
+#         self.holes = 0
+#         self.hole_depths = 0
+#         self.bumpiness = 0
+#         self.wells = 0
+#         self.surface_width = 0
+#         self.landing_height = 0
+#         return super().reset(*args, **kwargs)
+
+#     def calculate_reward(self, game_over, drop_distance, lines_cleared):
+#         """Calculate reward based on multiple heuristics."""
+#         assert self.state is not None, "self.state should not be None"
+#         metrics = self.state["metrics"]
+
+#         # Calculate changes in metrics
+#         delta_holes = metrics["holes"] - self.holes
+#         delta_hole_depths = metrics.get("hole_depths", 0) - self.hole_depths
+#         delta_bumpiness = metrics["bumpiness"] - self.bumpiness
+#         delta_wells = metrics.get("wells", 0) - self.wells
+#         delta_surface = metrics.get("surface_width", 0) - self.surface_width
+#         landing_height = metrics.get("landing_height", 0)
+
+#         # Update stored metrics
+#         self.holes = metrics["holes"]
+#         self.hole_depths = metrics.get("hole_depths", 0)
+#         self.bumpiness = metrics["bumpiness"]
+#         self.wells = metrics.get("wells", 0)
+#         self.surface_width = metrics.get("surface_width", 0)
+#         self.landing_height = landing_height
+
+#         # Calculate composite reward
+#         reward = (
+#             # Core heuristics from research
+#             self.LANDING_HEIGHT_WEIGHT * landing_height +
+#             self.ROWS_CLEARED_WEIGHT * lines_cleared +
+#             self.HOLES_WEIGHT * delta_holes +
+#             self.BUMPINESS_WEIGHT * delta_bumpiness +
+
+#             # Additional strategic considerations
+#             self.WELL_WEIGHT * delta_wells +
+#             self.HOLE_DEPTH_WEIGHT * delta_hole_depths +
+#             self.SURFACE_WIDTH_WEIGHT * delta_surface
+#         )
+
+#         # Add line clearing bonus
+#         reward += self.LINES_REWARD[lines_cleared]
+
+#         # Game over penalty
+#         if game_over:
+#             reward += self.GAME_OVER_PENALTY
+
+#         return reward
 
 
 def clear_screen():

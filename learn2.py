@@ -234,6 +234,7 @@ def learn():
     parser.add_argument("--num-envs", type=int, default=1, help="Number of environments")
     parser.add_argument("--subproc", action="store_true", help="Use SubprocVecEnv")
     parser.add_argument("--env-name", type=str, default="Tetris-imgh", help="Environment name")
+    parser.add_argument("--piece-gen", choices=("7bag", "14bag", "rnd"), default=None, help="Piece generator")
     parser.add_argument("--frame-stack", action="store_true", help="Use frame stacking")
     parser.add_argument("--frame-stack-size", type=int, default=4, help="Frame stack size")
     parser.add_argument(
@@ -242,13 +243,13 @@ def learn():
         nargs="+",
         default=["I", "O", "T", "L", "J"],
         choices=["I", "O", "T", "L", "J", "S", "Z"],
-        help="Tetrominoes to use (must be one of: I, O, T, L, J, S, Z)",
+        help="Tetrominoes to use",
     )
 
     # Other
     parser.add_argument("--random-seed", type=int, default=None, help="Use a random number seed")
     parser.add_argument("--quiet", action="store_true", help="Suppress output")
-    parser.add_argument("--device", type=str, default="auto", help="Device to use (auto, cpu, cuda, mps)")
+    parser.add_argument("--device", type=str, choices=("auto", "cpu", "cuda", "mps"), default="auto", help="Device to use")
 
     args = parser.parse_args()
     print(' '.join(f'{k}={v}' for k, v in vars(args).items()))
@@ -273,6 +274,7 @@ def learn():
         "grid_size": (20, 10),
         "tetrominoes": args.tetrominoes,
         "render_mode": "ansi",
+        "piece_gen": args.piece_gen,
     }
 
     vec_env_cls = SubprocVecEnv if args.subproc else DummyVecEnv
