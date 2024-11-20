@@ -44,15 +44,36 @@ class CustomMetricsCallback:
         self.episode_scores = []
         self.episode_lines = []
         self.episode_pieces = []
+        self.episode_bumpiness = []
+        self.episode_holes = []
+
+        self.last_pieces = 0
+        self.current_bumpiness = []
+        self.current_holes = []
 
     def __call__(self, locals_: dict, globals_: dict) -> None:
+        pieces = locals_["info"].get("pieces_placed", 0)
+        if pieces > self.last_pieces:
+            self.last_pieces = pieces
+            bumpiness = locals_["info"].get("bumpiness", 0)
+            holes = locals_["info"].get("holes", 0)
+            self.current_bumpiness.append(bumpiness)
+            self.current_holes.append(holes)
+
         if locals_["done"]:
             score = locals_["info"].get("score", 0)
             lines = locals_["info"].get("lines_cleared", 0)
-            pieces = locals_["info"].get("pieces_placed", 0)
             self.episode_scores.append(score)
             self.episode_lines.append(lines)
             self.episode_pieces.append(pieces)
+
+            self.episode_bumpiness.append(np.mean(self.current_bumpiness))
+            self.episode_holes.append(np.mean(self.current_holes))
+
+            # Reset current episode
+            self.current_bumpiness = []
+            self.current_holes = []
+            self.last_pieces = 0
 
     def get_results(self):
         """
@@ -64,7 +85,7 @@ class CustomMetricsCallback:
                 - score_std (float): The standard deviation of the episode scores.
                 - lines_mean (float): The mean of the episode lines.
                 - lines_std (float): The standard deviation of the episode lines.
-                - pieces_men (float): The mean of the episode pieces.
+                - pieces_mean (float): The mean of the episode pieces.
                 - pieces_std (float): The standard deviation of the episode pieces.
         """
         return (
@@ -90,21 +111,31 @@ if __name__ == "__main__":
     parser.add_argument("--env-name", type=str, default="Tetris-v3", help="Environment name")
     parser.add_argument("--frame-stack", action="store_true", help="Use frame stacking")
     parser.add_argument("--frame-stack-size", type=int, default=4, help="Frame stack size")
+    parser.add_argument("--random-seed", type=int, default=None, help="Use a random number seed")
+    parser.add_argument(
+        "--tetrominoes",
+        type=lambda s: s.upper(),
+        nargs="+",
+        default=["I", "O", "T", "L", "J"],
+        choices=["I", "O", "T", "L", "J", "S", "Z"],
+        help="Tetrominoes to use",
+    )
     args = parser.parse_args()
 
     render_mode = "pygame" if args.pygame else "ansi"
 
-    tetrominoes = ["I", "O", "T", "L", "J"]
     genv = gym.make(
         args.env_name,
         grid_size=(20, 10),
-        tetrominoes=tetrominoes,
+        tetrominoes=args.tetrominoes,
         render_mode=render_mode,
     )
     env = DummyVecEnv([lambda: Monitor(genv)])
     if args.frame_stack:
         print(f"Using {args.frame_stack_size} frame stacking")
         env = VecFrameStack(env, args.frame_stack_size, channels_order="first")
+
+    env.seed(seed=args.random_seed)
 
     try:
         model = DQN.load(args.model_file, env=env)
@@ -113,7 +144,6 @@ if __name__ == "__main__":
         sys.exit(-1)
 
     callback = CustomMetricsCallback()
-
     rewards, lengths = evaluate_policy(
         model,
         env,

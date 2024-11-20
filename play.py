@@ -33,13 +33,20 @@ if __name__ == "__main__":
     parser.add_argument("--frame-stack", action="store_true", help="Use frame stacking")
     parser.add_argument("--frame-stack-size", type=int, default=4, help="Frame stack size")
     parser.add_argument("--random-seed", type=int, default=None, help="Use a random number seed")
+    parser.add_argument(
+        "--tetrominoes",
+        type=lambda s: s.upper(),
+        nargs="+",
+        default=["I", "O", "T", "L", "J"],
+        choices=["I", "O", "T", "L", "J", "S", "Z"],
+        help="Tetrominoes to use",
+    )
     args = parser.parse_args()
 
-    tetrominoes = ["I", "O", "T", "L", "J"]
     genv = gym.make(
         args.env_name,
         grid_size=(20, 10),
-        tetrominoes=tetrominoes,
+        tetrominoes=args.tetrominoes,
         render_mode="pygame" if args.pygame else "ansi",
     )
     env = DummyVecEnv([lambda: Monitor(genv)])

@@ -81,12 +81,18 @@ class TetrisPyGameRenderer(TetrisRenderer):
     def initialize(self, board_width: int, board_height: int) -> None:
         """Initialize PyGame window and surfaces"""
         pygame.init()
-        mixer.init()
+        try:
+            mixer.init()
+        except pygame.error:
+            pass
         pygame.display.set_caption("Tetris")
 
         if self.music.exists():
-            mixer.music.load(self.music)
-            mixer.music.play(loops=-1)  # Play the music in loop
+            try:
+                mixer.music.load(self.music)
+                mixer.music.play(loops=-1)  # Play the music in loop
+            except pygame.error:
+                pass
 
         self.board_width = board_width
         self.board_height = board_height
