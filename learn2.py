@@ -70,7 +70,23 @@ def continue_learning(args: argparse.Namespace, env: VecEnv):
         - Calls the `do_z_learning` function to continue the learning process.
     """
     try:
-        model = DQN.load(args.model_file, env=env, tensorboard_log=args.tensorboard_log)
+        model = DQN.load(
+            args.model_file,
+            env=env,
+            tensorboard_log=args.tensorboard_log,
+            learning_rate=args.learning_rate,
+            gamma=args.gamma,
+            batch_size=args.batch_size,
+            learning_starts=args.learning_starts,
+            buffer_size=args.buffer_size,
+            target_update_interval=args.target_update_interval,
+            exploration_fraction=args.exploration_fraction,
+            exploration_initial_eps=args.exploration_initial_eps,
+            exploration_final_eps=args.exploration_final_eps,
+            train_freq=args.train_freq,
+            gradient_steps=args.gradient_steps,
+            verbose=0 if args.quiet else 1,
+        )
     except FileNotFoundError:
         print(f"Unable to find {args.model_file}")
         sys.exit(-1)
@@ -127,7 +143,7 @@ def start_learning(args: argparse.Namespace, env: VecEnv) -> None:
         train_freq=args.train_freq,
         gradient_steps=args.gradient_steps,
         # exploration_final_eps=0.1, # try with 0.05/0.1
-        verbose=1,
+        verbose=0 if args.quiet else 1,
         tensorboard_log=args.tensorboard_log,
         device=device,
     )
@@ -144,7 +160,6 @@ def do_z_learning(args: argparse.Namespace, env: VecEnv, model) -> None:
         env: (VecEnv): The environment for the model to interact with.
         model: The model to be trained.
     """
-    best_model = "best_model"
     eval_callback = EvalCallback(env, eval_freq=10000, best_model_save_path=args.best_model_path)
 
     record_game_info_callback = EpisodeEndMetricsCallback()
@@ -203,7 +218,7 @@ def learn():
     parser.add_argument("--target-update-interval", type=int, default=2000, help="Target update interval")
     parser.add_argument("--learning-rate", type=float, default=5e-5, help="Learning rate")
     parser.add_argument("--exploration-fraction", type=float, default=0.3, help="Exploration fraction")
-    parser.add_argument("--exploration-initial-eps", type=float, default=0.3, help="Exploration initial eps")
+    parser.add_argument("--exploration-initial-eps", type=float, default=1.0, help="Exploration initial eps")
     parser.add_argument("--exploration-final-eps", type=float, default=0.01, help="Exploration final eps")
     parser.add_argument("--train-freq", type=int, default=4, help="Train frequency")
     parser.add_argument("--gradient-steps", type=int, default=1, help="Gradinet steps")
@@ -249,10 +264,12 @@ def learn():
     # Other
     parser.add_argument("--random-seed", type=int, default=None, help="Use a random number seed")
     parser.add_argument("--quiet", action="store_true", help="Suppress output")
-    parser.add_argument("--device", type=str, choices=("auto", "cpu", "cuda", "mps"), default="auto", help="Device to use")
+    parser.add_argument(
+        "--device", type=str, choices=("auto", "cpu", "cuda", "mps"), default="auto", help="Device to use"
+    )
 
     args = parser.parse_args()
-    print(' '.join(f'{k}={v}' for k, v in vars(args).items()))
+    print(" ".join(f"{k}={v}" for k, v in vars(args).items()))
 
     # Set default paths based on work dir
     if not args.tensorboard_log:
