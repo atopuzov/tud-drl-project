@@ -8,6 +8,7 @@ of this software.
 """
 
 import argparse
+import signal
 import sys
 from pathlib import Path
 
@@ -188,9 +189,12 @@ def do_z_learning(args: argparse.Namespace, env: VecEnv, model) -> None:
             )
             model.save(args.model_file)
     except KeyboardInterrupt:
-        pass
-
-    model.save(args.model_file)
+        print("Training interrupted by user")
+    finally:
+        signal_type = signal.CTRL_C_EVENT if sys.platform.startswith("win") else signal.SIGINT
+        original_handler = signal.signal(signal_type, signal.SIG_IGN)
+        model.save(args.model_file)
+        signal.signal(signal_type, original_handler)
 
 
 def learn():
@@ -310,6 +314,8 @@ def learn():
     else:
         print("Continuing learning ...")
         continue_learning(args, env)
+
+    print("Training complete ...")
 
 
 if __name__ == "__main__":
