@@ -2,7 +2,7 @@
 Copyright (c) 2024 Aleksandar Topuzovic
 Email: aleksandar.topuzovic@gmail.com
 
-This software is provided "as is," without any express or implied warranty.
+This software is provided "as is" without any express or implied warranty.
 In no event shall the authors be liable for any damages arising from the use
 of this software.
 """
@@ -18,6 +18,7 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
 
 import tetrisenv  # noqa: F401  # pylint: disable=unused-import
+from rndagent import RandomAgent
 
 
 class CustomMetricsCallback:
@@ -106,7 +107,9 @@ if __name__ == "__main__":
     game_mode = parser.add_mutually_exclusive_group()
     game_mode.add_argument("--pygame", action="store_true", help="Use pygame interface")
     game_mode.add_argument("--ascii", action="store_true", help="Use ascii interface")
-    parser.add_argument("--model-file", type=Path, default="tetris_model.zip", help="Model file")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--model-file", type=Path, default="tetris_model.zip", help="Model file")
+    group.add_argument("--random", action="store_true", help="Use a random agent")
     parser.add_argument("--episodes", type=int, default=20, help="Number of episodes")
     parser.add_argument("--env-name", type=str, default="Tetris-v3", help="Environment name")
     parser.add_argument("--frame-stack", action="store_true", help="Use frame stacking")
@@ -137,11 +140,14 @@ if __name__ == "__main__":
 
     env.seed(seed=args.random_seed)
 
-    try:
-        model = DQN.load(args.model_file, env=env)
-    except FileNotFoundError:
-        print(f"Unable to find {args.model_file}")
-        sys.exit(-1)
+    if args.random:
+        model = RandomAgent(env, seed=args.random_seed)
+    else:
+        try:
+            model = DQN.load(args.model_file, env=env)
+        except FileNotFoundError:
+            print(f"Unable to find {args.model_file}")
+            sys.exit(-1)
 
     callback = CustomMetricsCallback()
     rewards, lengths = evaluate_policy(

@@ -2,7 +2,7 @@
 Copyright (c) 2024 Aleksandar Topuzovic
 Email: aleksandar.topuzovic@gmail.com
 
-This software is provided "as is," without any express or implied warranty.
+This software is provided "as is" without any express or implied warranty.
 In no event shall the authors be liable for any damages arising from the use
 of this software.
 """

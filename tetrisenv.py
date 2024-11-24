@@ -2,7 +2,7 @@
 Copyright (c) 2024 Aleksandar Topuzovic
 Email: aleksandar.topuzovic@gmail.com
 
-This software is provided "as is," without any express or implied warranty.
+This software is provided "as is" without any express or implied warranty.
 In no event shall the authors be liable for any damages arising from the use
 of this software.
 """
@@ -45,7 +45,14 @@ class BaseTetrisEnv(gym.Env):
         "render_fps": 4,
     }
 
-    def __init__(self, grid_size=(20, 10), tetrominoes: Optional[List[str]] = None, render_mode=None, piece_gen=None, ticks_per_drop=1):
+    def __init__(
+        self,
+        grid_size=(20, 10),
+        tetrominoes: Optional[List[str]] = None,
+        render_mode=None,
+        piece_gen=None,
+        ticks_per_drop=1,
+    ):
         super().__init__()
 
         self.render_mode = render_mode
@@ -119,7 +126,9 @@ class BaseRewardTetrisEnv(BaseTetrisEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # self.observation_space = spaces.Box(low=0, high=1, shape=grid_size, dtype=np.int32)
-        self.observation_space = spaces.Box(low=0, high=1, shape=(self.grid_size[0] * self.grid_size[1],), dtype=np.int32)
+        self.observation_space = spaces.Box(
+            low=0, high=1, shape=(self.grid_size[0] * self.grid_size[1],), dtype=np.int32
+        )
 
     def _get_observation(self) -> np.ndarray | Dict:
         """Return the current state of the game grid."""
@@ -432,6 +441,7 @@ class ImgHTetrisEnv(ImageTetrisBaseEnv):
 
 class MyTetrisEnv2(ImageTetrisBaseEnv):
     """Tetris environment with custom rewards and RGB array observations."""
+
     GAME_OVER_REWARD = -50
     PLACED_REWARD = 0.5
     LINE_REWARD = [0, 100, 250, 750, 3000]
@@ -477,7 +487,6 @@ class MyTetrisEnv2(ImageTetrisBaseEnv):
             reward += self.GAME_OVER_REWARD
 
         return reward
-
 
 
 # TODO

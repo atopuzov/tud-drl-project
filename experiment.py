@@ -1,11 +1,12 @@
-import subprocess
-import time
-from pathlib import Path
-import sys
-from typing import Tuple
-import yaml
 import argparse
 import signal
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Tuple
+
+import yaml
 
 
 def run_experiment(config: dict) -> Tuple[subprocess.Popen, Path]:
@@ -104,7 +105,12 @@ def run_experiment(config: dict) -> Tuple[subprocess.Popen, Path]:
         return process, log_file
 
 
-def monitor_processes(processes: list[tuple[subprocess.Popen, Path]], max_restarts: int = 10, restart_delay: float = 30.0, min_runtime: float = 60.0) -> None:
+def monitor_processes(
+    processes: list[tuple[subprocess.Popen, Path]],
+    max_restarts: int = 10,
+    restart_delay: float = 30.0,
+    min_runtime: float = 60.0,
+) -> None:
     """
     Monitor the status of multiple subprocesses. Reruns failed processes with safeguards.
 
@@ -138,9 +144,11 @@ def monitor_processes(processes: list[tuple[subprocess.Popen, Path]], max_restar
 
                         # Check if we should restart
                         if process_stats[process.pid]["restarts"] < max_restarts:
-                            print(f"Process {process.pid} failed with return code {retcode}. "
-                                  f"Restart attempt {process_stats[process.pid]['restarts'] + 1}/{max_restarts} "
-                                  f"after {restart_delay} seconds delay...")
+                            print(
+                                f"Process {process.pid} failed with return code {retcode}. "
+                                f"Restart attempt {process_stats[process.pid]['restarts'] + 1}/{max_restarts} "
+                                f"after {restart_delay} seconds delay..."
+                            )
 
                             # Remove old process first
                             processes.remove(proc_tuple)
@@ -151,20 +159,20 @@ def monitor_processes(processes: list[tuple[subprocess.Popen, Path]], max_restar
 
                             # Start new process
                             new_process = subprocess.Popen(
-                                process.args,
-                                stdout=open(log_file, "a", encoding="utf-8"),
-                                stderr=subprocess.STDOUT
+                                process.args, stdout=open(log_file, "a", encoding="utf-8"), stderr=subprocess.STDOUT
                             )
 
                             # Add new process tracking info
                             processes.append((new_process, log_file))
                             process_stats[new_process.pid] = {
                                 "restarts": process_stats.get(process.pid, {}).get("restarts", 0) + 1,
-                                "last_start": time.time()
+                                "last_start": time.time(),
                             }
                         else:
-                            print(f"Process {process.pid} failed with return code {retcode}. "
-                                  f"Max restarts ({max_restarts}) reached. Giving up.")
+                            print(
+                                f"Process {process.pid} failed with return code {retcode}. "
+                                f"Max restarts ({max_restarts}) reached. Giving up."
+                            )
                             processes.remove(proc_tuple)
                             process_stats.pop(process.pid)
                 else:
@@ -189,7 +197,6 @@ def monitor_processes(processes: list[tuple[subprocess.Popen, Path]], max_restar
                 process.terminate()
                 process.wait()  # Wait for forced termination
                 print(f"Process {process.pid} was forcefully terminated. Log: {log_file}")
-
 
 
 if __name__ == "__main__":

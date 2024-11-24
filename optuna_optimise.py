@@ -2,7 +2,7 @@
 Copyright (c) 2024 Aleksandar Topuzovic
 Email: aleksandar.topuzovic@gmail.com
 
-This software is provided "as is," without any express or implied warranty.
+This software is provided "as is" without any express or implied warranty.
 In no event shall the authors be liable for any damages arising from the use
 of this software.
 """
@@ -24,6 +24,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecFram
 import customcnn
 import tetrisenv  # noqa: F401  # pylint: disable=unused-import
 
+
 def sample_dqn_params(trial: optuna.Trial) -> Dict[str, any]:
     """
     Sample hyperparameters for DQN.
@@ -38,7 +39,6 @@ def sample_dqn_params(trial: optuna.Trial) -> Dict[str, any]:
         # Network architecture
         "net_arch": [trial.suggest_int("net_arch_hidden", 64, 512)],
         "features_dim": trial.suggest_int("features_dim", 64, 512),
-
         # Training hyperparameters
         "learning_rate": trial.suggest_float("learning_rate", 1e-5, 1e-3, log=True),
         "batch_size": trial.suggest_categorical("batch_size", [32, 64, 128, 256]),
@@ -46,12 +46,12 @@ def sample_dqn_params(trial: optuna.Trial) -> Dict[str, any]:
         "learning_starts": trial.suggest_int("learning_starts", 10000, 100000),
         "target_update_interval": trial.suggest_int("target_update_interval", 500, 10000),
         "gamma": trial.suggest_float("gamma", 0.9, 0.99999, log=True),
-
         # Exploration parameters
         "exploration_fraction": trial.suggest_float("exploration_fraction", 0.1, 0.5),
         "exploration_initial_eps": trial.suggest_float("exploration_initial_eps", 0.1, 1.0),
         "exploration_final_eps": trial.suggest_float("exploration_final_eps", 0.01, 0.1),
     }
+
 
 def create_env(args: argparse.Namespace):
     """Create vectorized environment."""
@@ -62,17 +62,13 @@ def create_env(args: argparse.Namespace):
     }
 
     vec_env_cls = SubprocVecEnv if args.subproc else DummyVecEnv
-    env = make_vec_env(
-        args.env_name,
-        env_kwargs=env_kwargs,
-        n_envs=args.num_envs,
-        vec_env_cls=vec_env_cls
-    )
+    env = make_vec_env(args.env_name, env_kwargs=env_kwargs, n_envs=args.num_envs, vec_env_cls=vec_env_cls)
 
     if args.frame_stack:
         env = VecFrameStack(env, args.frame_stack_size, channels_order="first")
 
     return env
+
 
 def objective(trial: optuna.Trial, args: argparse.Namespace) -> float:
     """
@@ -92,17 +88,12 @@ def objective(trial: optuna.Trial, args: argparse.Namespace) -> float:
     env = create_env(args)
 
     # Get feature extractor
-    feature_extractor = customcnn.FEATURE_EXTRACTORS.get(
-        args.extractor_name,
-        customcnn.TetrisFeatureExtractor
-    )
+    feature_extractor = customcnn.FEATURE_EXTRACTORS.get(args.extractor_name, customcnn.TetrisFeatureExtractor)
 
     # Set up policy kwargs
     policy_kwargs = {
         "features_extractor_class": feature_extractor,
-        "features_extractor_kwargs": {
-            "features_dim": hyper_params["features_dim"]
-        },
+        "features_extractor_kwargs": {"features_dim": hyper_params["features_dim"]},
         "net_arch": hyper_params["net_arch"],
         "activation_fn": torch.nn.ReLU,
     }
@@ -137,20 +128,11 @@ def objective(trial: optuna.Trial, args: argparse.Namespace) -> float:
     eval_path = Path(args.work_dir) / f"trial_{trial.number}"
     eval_path.mkdir(parents=True, exist_ok=True)
     eval_callback = EvalCallback(
-        env,
-        best_model_save_path=str(eval_path),
-        eval_freq=10000,
-        n_eval_episodes=5,
-        deterministic=True,
-        verbose=0
+        env, best_model_save_path=str(eval_path), eval_freq=10000, n_eval_episodes=5, deterministic=True, verbose=0
     )
 
     try:
-        model.learn(
-            total_timesteps=args.timestamps,
-            callback=eval_callback,
-            progress_bar=True
-        )
+        model.learn(total_timesteps=args.timestamps, callback=eval_callback, progress_bar=True)
     except (AssertionError, ValueError) as e:
         # Sometimes the training can fail due to NaN
         print(f"Training failed: {str(e)}")
@@ -158,6 +140,7 @@ def objective(trial: optuna.Trial, args: argparse.Namespace) -> float:
 
     # Return best mean reward
     return eval_callback.best_mean_reward
+
 
 def optimize(args: argparse.Namespace):
     """Run the optimization."""
@@ -172,10 +155,7 @@ def optimize(args: argparse.Namespace):
 
     try:
         study.optimize(
-            lambda trial: objective(trial, args),
-            n_trials=args.n_trials,
-            n_jobs=args.n_jobs,
-            show_progress_bar=True
+            lambda trial: objective(trial, args), n_trials=args.n_trials, n_jobs=args.n_jobs, show_progress_bar=True
         )
     except KeyboardInterrupt:
         pass
@@ -188,6 +168,7 @@ def optimize(args: argparse.Namespace):
     print("  Params:")
     for key, value in trial.params.items():
         print(f"    {key}: {value}")
+
 
 def main():
     parser = argparse.ArgumentParser(description="Optimize Tetris DQN hyperparameters")
@@ -221,6 +202,7 @@ def main():
     args.tensorboard_log.mkdir(parents=True, exist_ok=True)
 
     optimize(args)
+
 
 if __name__ == "__main__":
     main()

@@ -2,7 +2,7 @@
 Copyright (c) 2024 Aleksandar Topuzovic
 Email: aleksandar.topuzovic@gmail.com
 
-This software is provided "as is," without any express or implied warranty.
+This software is provided "as is" without any express or implied warranty.
 In no event shall the authors be liable for any damages arising from the use
 of this software.
 """
@@ -19,6 +19,7 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
 
 import tetrisenv  # noqa: F401  # pylint: disable=unused-import
+from rndagent import RandomAgent
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Game of Tetris")
@@ -55,13 +56,7 @@ if __name__ == "__main__":
         env = VecFrameStack(env, args.frame_stack_size, channels_order="first")
 
     if args.random:
-        model = DQN(
-            "MlpPolicy",
-            env,
-            exploration_fraction=1.0,  # Maintain maximum exploration
-            exploration_initial_eps=1.0,  # Start with 100% random actions
-            exploration_final_eps=1.0,  # Keep 100% random actions (never decrease)
-        )
+        model = RandomAgent(env, seed=args.random_seed)
     else:
         try:
             model = DQN.load(args.model_file, env=env)

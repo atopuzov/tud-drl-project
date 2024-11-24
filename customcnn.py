@@ -2,7 +2,7 @@
 Copyright (c) 2024 Aleksandar Topuzovic
 Email: aleksandar.topuzovic@gmail.com
 
-This software is provided "as is," without any express or implied warranty.
+This software is provided "as is" without any express or implied warranty.
 In no event shall the authors be liable for any damages arising from the use
 of this software.
 """
@@ -46,17 +46,13 @@ class TFEAtari(BaseFeaturesExtractor):
                 in_channels=n_chan,
                 out_channels=16,
                 kernel_size=3,  # Reduced from 8x8 due to smaller input
-                stride=1,       # Reduced from 4 to preserve spatial dimensions
-                padding=1       # Add padding to maintain spatial dimensions
-            ), # After conv1: 20x10x16
+                stride=1,  # Reduced from 4 to preserve spatial dimensions
+                padding=1,  # Add padding to maintain spatial dimensions
+            ),  # After conv1: 20x10x16
             nn.ReLU(),
             nn.Conv2d(
-                in_channels=16,
-                out_channels=32,
-                kernel_size=3,  # Reduced from 4x4
-                stride=1,
-                padding=1
-            ), # After conv2: 20x10x32
+                in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1  # Reduced from 4x4
+            ),  # After conv2: 20x10x32
             nn.ReLU(),
             nn.Flatten(),
         )
@@ -78,12 +74,12 @@ class TFEDLR(BaseFeaturesExtractor):
     A custom feature extractor for Tetris game observations using a Convolutional Neural Network (CNN).
     The network consists of three convolutional layers with max pooling followed by a linear layer.
     Playing Tetris with Deep Reinforcement Learning paper
-    conv1: 32 5x5, relu 
-    conv2: 64 3x3, relu 
+    conv1: 32 5x5, relu
+    conv2: 64 3x3, relu
     maxpol: 2x2
-    conv3: 64 3x3, relu 
+    conv3: 64 3x3, relu
     maxpol: 2x2
-    fc-256, relu 
+    fc-256, relu
     fc-256, relu
 
     Args:
@@ -113,7 +109,6 @@ class TFEDLR(BaseFeaturesExtractor):
         super().__init__(observation_space, features_dim)
         n_chan = observation_space.shape[0]
 
-        
         self.cnn = nn.Sequential(
             # First conv layer
             nn.Conv2d(n_chan, num_kernels[0], kernel_size=kernel_sizes[0], stride=1, padding=1),
@@ -359,11 +354,11 @@ class TetrisFeatureExtractor6(BaseFeaturesExtractor):
 
 
 FEATURE_EXTRACTORS = {
-    'TFEAtari': TFEAtari,
-    'TFEDLR': TFEDLR,    
-    'TetrisFeatureExtractor': TetrisFeatureExtractor,
-    'TetrisFeatureExtractor2': TetrisFeatureExtractor2,
-    'TetrisFeatureExtractor3': TetrisFeatureExtractor3,
-    'TetrisFeatureExtractor5': TetrisFeatureExtractor5,
-    'TetrisFeatureExtractor6': TetrisFeatureExtractor6,
+    "TFEAtari": TFEAtari,
+    "TFEDLR": TFEDLR,
+    "TetrisFeatureExtractor": TetrisFeatureExtractor,
+    "TetrisFeatureExtractor2": TetrisFeatureExtractor2,
+    "TetrisFeatureExtractor3": TetrisFeatureExtractor3,
+    "TetrisFeatureExtractor5": TetrisFeatureExtractor5,
+    "TetrisFeatureExtractor6": TetrisFeatureExtractor6,
 }
