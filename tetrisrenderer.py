@@ -7,6 +7,7 @@ In no event shall the authors be liable for any damages arising from the use
 of this software.
 """
 
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -23,7 +24,7 @@ except ModuleNotFoundError:
     PYGAME_AVAILABLE = False
 
 
-class TetrisRenderer:
+class TetrisRenderer(ABC):
     """Base class for Tetris renderers"""
 
     COLORS = {
@@ -37,28 +38,15 @@ class TetrisRenderer:
         7: (255, 165, 0),  # L - Orange
     }
 
-    ASCII_COLORS = {
-        0: "",  # Empty
-        1: "\033[36m",  # I - Cyan
-        2: "\033[33m",  # O - Yellow
-        3: "\033[35m",  # T - Purple
-        4: "\033[32m",  # S - Green
-        5: "\033[31m",  # Z - Red
-        6: "\033[34m",  # J - Blue
-        7: "\033[38;5;214m",  # L - Orange
-    }
+    @abstractmethod
+    def render(self):
+        """Concrete implementation needs to implement this method"""
+        pass
 
-    # Matches MS-DOS version
-    ASCII_COLORS = {
-        0: "",  # Empty
-        1: "\033[31m",  #  - Red
-        2: "\033[34m",  #  - Blue
-        3: "\033[33m",  #  - Yellow
-        4: "\033[32m",  #  - Green
-        5: "\033[96m",  #  - Cyan
-        6: "\033[37m",  #  - White
-        7: "\033[35m",  #  - Purple
-    }
+    @abstractmethod
+    def close(self):
+        """Concrete implementation needs to implement this method"""
+        pass
 
 
 class TetrisPyGameRenderer(TetrisRenderer):
@@ -217,6 +205,18 @@ class TetrisPyGameRenderer(TetrisRenderer):
 class TetrisASCIIRenderer(TetrisRenderer):
     """ASCII-based console renderer for Tetris"""
 
+    # Matches MS-DOS version
+    ASCII_COLORS = {
+        0: "",  # Empty
+        1: "\033[31m",  #  - Red
+        2: "\033[34m",  #  - Blue
+        3: "\033[33m",  #  - Yellow
+        4: "\033[32m",  #  - Green
+        5: "\033[96m",  #  - Cyan
+        6: "\033[37m",  #  - White
+        7: "\033[35m",  #  - Purple
+    }
+
     def __init__(self, cell_width: int = 2, block: str = "█", empty: str = "."):
         self.cell_width = cell_width
         self.block = block
@@ -291,6 +291,19 @@ class TetrisASCIIRenderer2(TetrisASCIIRenderer):
         self.left_corner = "<!"
         self.right_corner = "!>"
         self.print_top = False
+
+
+class TetrisASCIIRenderer3(TetrisASCIIRenderer):
+    ASCII_COLORS = {
+        0: "",  # Empty
+        1: "\033[36m",  # I - Cyan
+        2: "\033[33m",  # O - Yellow
+        3: "\033[35m",  # T - Purple
+        4: "\033[32m",  # S - Green
+        5: "\033[31m",  # Z - Red
+        6: "\033[34m",  # J - Blue
+        7: "\033[38;5;214m",  # L - Orange
+    }
 
 
 class TetrisRGBArrayRenderer(TetrisRenderer):
