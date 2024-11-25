@@ -34,6 +34,7 @@ if __name__ == "__main__":
     parser.add_argument("--frame-stack", action="store_true", help="Use frame stacking")
     parser.add_argument("--frame-stack-size", type=int, default=4, help="Frame stack size")
     parser.add_argument("--random-seed", type=int, default=None, help="Use a random number seed")
+    parser.add_argument("--pause", action="store_true", help="Pasue after gameplay")
     parser.add_argument(
         "--tetrominoes",
         type=lambda s: s.upper(),
@@ -82,4 +83,6 @@ if __name__ == "__main__":
             time.sleep(args.delay)
     finally:
         # env.render()  # Render the game state
+        if args.pause:
+            _ = input("Press enter to continue")
         env.close()
