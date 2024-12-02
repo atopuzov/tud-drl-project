@@ -11,6 +11,7 @@ import argparse
 import sys
 import time
 from pathlib import Path
+from typing import Optional
 
 import gymnasium as gym
 import numpy as np
@@ -21,7 +22,9 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
 import tetrisenv  # noqa: F401  # pylint: disable=unused-import
 from rndagent import RandomAgent
 
-if __name__ == "__main__":
+
+def main(cmdline: Optional[str]) -> None:
+    """Main function for playing Tetris"""
     parser = argparse.ArgumentParser(description="Game of Tetris")
     parser.add_argument("--delay", type=float, default=0.01, help="Delay between frames")
     group = parser.add_mutually_exclusive_group()
@@ -43,7 +46,10 @@ if __name__ == "__main__":
         choices=["I", "O", "T", "L", "J", "S", "Z"],
         help="Tetrominoes to use",
     )
-    args = parser.parse_args()
+    if cmdline:
+        args = parser.parse_args(cmdline.split())
+    else:
+        args = parser.parse_args()
 
     genv = gym.make(
         args.env_name,
@@ -86,3 +92,7 @@ if __name__ == "__main__":
         if args.pause:
             _ = input("Press enter to continue")
         env.close()
+
+
+if __name__ == "__main__":
+    main()

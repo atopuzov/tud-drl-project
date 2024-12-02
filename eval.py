@@ -9,6 +9,7 @@ of this software.
 
 import sys
 from pathlib import Path
+from typing import Optional
 
 import gymnasium as gym
 import numpy as np
@@ -99,7 +100,8 @@ class CustomMetricsCallback:
         )
 
 
-if __name__ == "__main__":
+def main(cmdline: Optional[str]) -> None:
+    """Main function for evaluating a trained model on the Tetris environment."""
     import argparse
 
     parser = argparse.ArgumentParser(description="Game of Tetris")
@@ -123,7 +125,10 @@ if __name__ == "__main__":
         choices=["I", "O", "T", "L", "J", "S", "Z"],
         help="Tetrominoes to use",
     )
-    args = parser.parse_args()
+    if cmdline:
+        args = parser.parse_args(cmdline.split())
+    else:
+        args = parser.parse_args()
 
     render_mode = "pygame" if args.pygame else "ansi"
 
@@ -171,3 +176,7 @@ if __name__ == "__main__":
     )
 
     env.close()
+
+
+if __name__ == "__main__":
+    main()
